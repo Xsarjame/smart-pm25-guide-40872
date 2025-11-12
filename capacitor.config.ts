@@ -6,9 +6,19 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: {
     url: 'https://cc089fb2-d7db-4532-8059-e13b81b48a98.lovableproject.com?forceHideBadge=true',
-    cleartext: true
+    cleartext: true,
+    allowNavigation: ['*']
+  },
+  ios: {
+    contentInset: 'always'
+  },
+  android: {
+    allowMixedContent: true
   },
   plugins: {
+    CapacitorHttp: {
+      enabled: true
+    },
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert']
     },
