@@ -51,7 +51,9 @@ export const useAirQuality = () => {
 
   const requestNotificationPermission = async () => {
     try {
+      console.log('Requesting notification permission...');
       const currentPermission = await LocalNotifications.checkPermissions();
+      console.log('Current notification permission:', currentPermission);
       
       if (currentPermission.display === 'denied') {
         toast({
@@ -63,7 +65,10 @@ export const useAirQuality = () => {
       }
       
       if (currentPermission.display !== 'granted') {
+        console.log('Requesting notification permission from user...');
         const permission = await LocalNotifications.requestPermissions();
+        console.log('Permission result:', permission);
+        
         if (permission.display !== 'granted') {
           toast({
             title: 'จำเป็นต้องใช้สิทธิ์การแจ้งเตือน',
@@ -73,42 +78,60 @@ export const useAirQuality = () => {
         }
       }
       
+      console.log('Notification permission granted');
       return true;
     } catch (error) {
       console.error('Error requesting notification permission:', error);
+      toast({
+        title: 'เกิดข้อผิดพลาด',
+        description: 'ไม่สามารถขอสิทธิ์การแจ้งเตือนได้',
+        variant: 'destructive',
+      });
       return false;
     }
   };
 
   const sendNotification = async (pm25: number, location: string, hasHealthConditions: boolean) => {
-    if (pm25 <= 37) return;
+    try {
+      if (pm25 <= 37) return;
 
-    // Check if we have permission (don't request again, already requested on app start)
-    const currentPermission = await LocalNotifications.checkPermissions();
-    if (currentPermission.display !== 'granted') return;
+      // Check if we have permission (don't request again, already requested on app start)
+      const currentPermission = await LocalNotifications.checkPermissions();
+      if (currentPermission.display !== 'granted') {
+        console.log('Notification permission not granted');
+        return;
+      }
 
-    let title = 'แจ้งเตือน: ค่าฝุ่น PM2.5 สูง';
-    let body = `พื้นที่ ${location} มีค่า PM2.5 อยู่ที่ ${pm25} µg/m³`;
+      let title = 'แจ้งเตือน: ค่าฝุ่น PM2.5 สูง';
+      let body = `พื้นที่ ${location} มีค่า PM2.5 อยู่ที่ ${pm25} µg/m³`;
 
-    if (pm25 > 90) {
-      title = '⚠️ เตือนภัย! PM2.5 อยู่ในระดับอันตราย';
+      if (pm25 > 90) {
+        title = '⚠️ เตือนภัย! PM2.5 อยู่ในระดับอันตราย';
+      }
+
+      if (hasHealthConditions) {
+        body += '\n⚠️ คุณมีโรคประจำตัว โปรดระมัดระวังเป็นพิเศษ';
+      }
+
+      console.log('Scheduling notification:', { title, body });
+
+      await LocalNotifications.schedule({
+        notifications: [{
+          title,
+          body,
+          id: Date.now(),
+          schedule: { at: new Date(Date.now() + 1000) },
+          sound: 'default',
+          actionTypeId: '',
+          extra: null
+        }]
+      });
+
+      console.log('Notification scheduled successfully');
+    } catch (error) {
+      console.error('Error scheduling notification:', error);
+      // Don't throw - just log the error
     }
-
-    if (hasHealthConditions) {
-      body += '\n⚠️ คุณมีโรคประจำตัว โปรดระมัดระวังเป็นพิเศษ';
-    }
-
-    await LocalNotifications.schedule({
-      notifications: [{
-        title,
-        body,
-        id: Date.now(),
-        schedule: { at: new Date(Date.now() + 1000) },
-        sound: 'default',
-        actionTypeId: '',
-        extra: null
-      }]
-    });
   };
 
   const fetchAirQuality = async () => {
@@ -122,10 +145,11 @@ export const useAirQuality = () => {
       }
 
       // Get current position with proper mobile settings
+      console.log('Getting current position...');
       const position = await Geolocation.getCurrentPosition({
         enableHighAccuracy: true,
-        timeout: 15000, // Increased timeout for mobile
-        maximumAge: 30000 // Allow cached position up to 30 seconds old
+        timeout: 20000, // Increased timeout for mobile (20 seconds)
+        maximumAge: 60000 // Allow cached position up to 60 seconds old
       });
 
       console.log('Location obtained:', {
