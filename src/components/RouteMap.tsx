@@ -9,6 +9,7 @@ import { MapPin, Navigation, Loader2, CheckCircle2 } from 'lucide-react';
 import { useRoutePM25, RouteWithPM25 } from '@/hooks/useRoutePM25';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { supabase } from '@/integrations/supabase/client';
 
 
 
@@ -25,18 +26,21 @@ export const RouteMap = ({ currentLat, currentLng }: { currentLat: number; curre
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
-    // Initialize map without requiring client-side token
-    // All API calls are handled server-side for security
     const initMap = async () => {
       try {
+        // Fetch Mapbox token from edge function
+        const { data: tokenData, error } = await supabase.functions.invoke('get-mapbox-token');
+        
+        if (error || !tokenData?.token) {
+          console.error('Failed to get Mapbox token:', error);
+          return;
+        }
+
+        mapboxgl.accessToken = tokenData.token;
+
         map.current = new mapboxgl.Map({
           container: mapContainer.current!,
-          style: {
-            version: 8,
-            sources: {},
-            layers: [],
-            glyphs: 'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf'
-          },
+          style: 'mapbox://styles/mapbox/streets-v12',
           center: [currentLng, currentLat],
           zoom: 12,
         });
