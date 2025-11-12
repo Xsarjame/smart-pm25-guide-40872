@@ -6,10 +6,11 @@ import { HealthRecommendations } from "@/components/HealthRecommendations";
 import { AlertNotification } from "@/components/AlertNotification";
 import { NearbyHospitals } from "@/components/NearbyHospitals";
 import { AIHealthAdvice } from "@/components/AIHealthAdvice";
+import { HealthChatbot } from "@/components/HealthChatbot";
 import { RouteMap } from "@/components/RouteMap";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, RefreshCw, User, Hospital, Loader2, Navigation } from "lucide-react";
+import { MapPin, RefreshCw, User, Hospital, Loader2, Navigation, MessageSquare } from "lucide-react";
 import heroImage from "@/assets/hero-clean-air.jpg";
 import { useAirQuality } from "@/hooks/useAirQuality";
 import { Geolocation } from '@capacitor/geolocation';
@@ -157,9 +158,13 @@ const Index = () => {
           </div>
         ) : null}
 
-        {/* Tabs for AI, Recommendations, Hospitals, and Navigation */}
-        <Tabs defaultValue="ai-advice" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+        {/* Tabs for AI, Chat, Recommendations, Hospitals, and Navigation */}
+        <Tabs defaultValue="chatbot" className="w-full">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="chatbot">
+              <MessageSquare className="w-4 h-4 mr-1" />
+              Chat
+            </TabsTrigger>
             <TabsTrigger value="ai-advice">AI</TabsTrigger>
             <TabsTrigger value="recommendations">คำแนะนำ</TabsTrigger>
             <TabsTrigger value="hospitals">
@@ -171,6 +176,13 @@ const Index = () => {
               นำทาง
             </TabsTrigger>
           </TabsList>
+          <TabsContent value="chatbot" className="mt-4">
+            <HealthChatbot 
+              pm25={pm25Value}
+              temperature={data?.temperature || 0}
+              humidity={data?.humidity || 0}
+            />
+          </TabsContent>
           <TabsContent value="ai-advice" className="mt-4">
             <AIHealthAdvice
               pm25={pm25Value}
