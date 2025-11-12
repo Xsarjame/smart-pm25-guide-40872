@@ -6,10 +6,17 @@ import { useToast } from '@/hooks/use-toast';
 
 interface AirQualityData {
   pm25: number;
+  pm10?: number;
+  no2?: number;
+  o3?: number;
+  so2?: number;
+  co?: number;
+  aqi?: number;
   location: string;
   timestamp: string;
   temperature: number;
   humidity: number;
+  source?: string;
 }
 
 export const useAirQuality = () => {

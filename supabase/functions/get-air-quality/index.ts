@@ -12,85 +12,83 @@ serve(async (req) => {
 
   try {
     const { latitude, longitude } = await req.json();
-    const IQAIR_API_KEY = Deno.env.get('IQAIR_API_KEY');
     const OWM_API_KEY = Deno.env.get('OPENWEATHER_API_KEY');
 
-    if (!IQAIR_API_KEY) {
-      throw new Error('IQAIR_API_KEY is not configured');
+    if (!OWM_API_KEY) {
+      throw new Error('OPENWEATHER_API_KEY is not configured');
     }
 
     console.log('Fetching air quality data for:', { latitude, longitude });
 
-    // Fetch air quality data from IQAir - more accurate for Thailand
-    const iqairResponse = await fetch(
-      `https://api.airvisual.com/v2/nearest_city?lat=${latitude}&lon=${longitude}&key=${IQAIR_API_KEY}`
+    // Fetch air quality data from OpenWeatherMap
+    const owmAirResponse = await fetch(
+      `https://api.openweathermap.org/data/2.5/air_pollution?lat=${latitude}&lon=${longitude}&appid=${OWM_API_KEY}`
     );
 
-    if (!iqairResponse.ok) {
-      const errorText = await iqairResponse.text();
-      console.error('IQAir API error:', iqairResponse.status, errorText);
-      throw new Error(`IQAir API error: ${iqairResponse.status}`);
+    if (!owmAirResponse.ok) {
+      const errorText = await owmAirResponse.text();
+      console.error('OpenWeatherMap air quality API error:', owmAirResponse.status, errorText);
+      throw new Error(`OpenWeatherMap API error: ${owmAirResponse.status}`);
     }
 
-    const iqairData = await iqairResponse.json();
-    console.log('IQAir data received:', iqairData);
+    const owmAirData = await owmAirResponse.json();
+    console.log('OpenWeatherMap air quality data received:', owmAirData);
 
-    if (iqairData.status !== 'success') {
-      throw new Error(`IQAir API error: ${iqairData.data || 'Unknown error'}`);
+    // Fetch weather data for temperature and humidity
+    const owmWeatherResponse = await fetch(
+      `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${OWM_API_KEY}&units=metric`
+    );
+
+    if (!owmWeatherResponse.ok) {
+      const errorText = await owmWeatherResponse.text();
+      console.error('OpenWeatherMap weather API error:', owmWeatherResponse.status, errorText);
+      throw new Error(`OpenWeatherMap weather API error: ${owmWeatherResponse.status}`);
     }
 
-    const { data } = iqairData;
+    const owmWeatherData = await owmWeatherResponse.json();
+    console.log('OpenWeatherMap weather data received:', owmWeatherData);
+
+    // Extract all air quality components
+    const components = owmAirData.list?.[0]?.components || {};
+    const aqi = owmAirData.list?.[0]?.main?.aqi || 1;
     
-    // Extract PM2.5 from IQAir - this is real-time data from government stations
-    const pm25 = data.current?.pollution?.aqius 
-      ? Math.round(data.current.pollution.aqius * 0.84) // Convert US AQI to µg/m³ approximation
-      : data.current?.pollution?.p2?.conc || 0;
+    // PM2.5 is the primary pollutant we're tracking
+    const pm25 = Math.round(components.pm2_5 || 0);
+    const pm10 = Math.round(components.pm10 || 0);
+    const no2 = Math.round(components.no2 || 0);
+    const o3 = Math.round(components.o3 || 0);
+    const so2 = Math.round(components.so2 || 0);
+    const co = Math.round(components.co || 0);
     
     // Extract location
-    const location = `${data.city || 'Unknown'}, ${data.country || ''}`;
+    const location = owmWeatherData.name || 'Unknown Location';
     
-    // Extract timestamp from IQAir or use current time
-    const timestamp = data.current?.pollution?.ts || new Date().toISOString();
+    // Extract timestamp
+    const timestamp = new Date().toISOString();
 
-    // Get temperature and humidity from IQAir if available, otherwise use OpenWeatherMap as fallback
-    let temperature = data.current?.weather?.tp || null;
-    let humidity = data.current?.weather?.hu || null;
-
-    // Fallback to OpenWeatherMap for weather data if not available from IQAir
-    if (temperature === null || humidity === null) {
-      if (OWM_API_KEY) {
-        try {
-          const owmWeatherResponse = await fetch(
-            `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${OWM_API_KEY}&units=metric`
-          );
-          
-          if (owmWeatherResponse.ok) {
-            const owmWeatherData = await owmWeatherResponse.json();
-            temperature = temperature ?? Math.round(owmWeatherData.main?.temp || 25);
-            humidity = humidity ?? Math.round(owmWeatherData.main?.humidity || 60);
-          }
-        } catch (owmError) {
-          console.error('OpenWeatherMap fallback error:', owmError);
-        }
-      }
-      
-      // Final fallback to default values
-      temperature = temperature ?? 25;
-      humidity = humidity ?? 60;
-    } else {
-      temperature = Math.round(temperature);
-      humidity = Math.round(humidity);
-    }
+    // Get temperature and humidity from OpenWeatherMap weather data
+    const temperature = Math.round(owmWeatherData.main?.temp || 25);
+    const humidity = Math.round(owmWeatherData.main?.humidity || 60);
     
-    console.log('Processed data from IQAir:', { pm25, location, temperature, humidity, timestamp });
+    console.log('Processed data:', { 
+      pm25, pm10, no2, o3, so2, co, aqi,
+      location, temperature, humidity 
+    });
     
     return new Response(
       JSON.stringify({
-        pm25: Math.round(pm25),
+        pm25,
+        pm10,
+        no2,
+        o3,
+        so2,
+        co,
+        aqi,
         location,
         timestamp,
         temperature,
         humidity,
+        source: 'OpenWeatherMap'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

@@ -133,8 +133,13 @@ const Index = () => {
         {/* Air Quality Card */}
         <AirQualityCard 
           pm25={pm25Value} 
+          pm10={data?.pm10}
+          no2={data?.no2}
+          o3={data?.o3}
+          aqi={data?.aqi}
           location={location}
           timestamp={currentTime}
+          source={data?.source}
         />
 
         {/* User Profile Display or Form */}

@@ -4,11 +4,16 @@ import { Wind, AlertTriangle } from "lucide-react";
 
 interface AirQualityCardProps {
   pm25: number;
+  pm10?: number;
+  no2?: number;
+  o3?: number;
+  aqi?: number;
   location: string;
   timestamp?: string;
+  source?: string;
 }
 
-export const AirQualityCard = ({ pm25, location, timestamp }: AirQualityCardProps) => {
+export const AirQualityCard = ({ pm25, pm10, no2, o3, aqi, location, timestamp, source }: AirQualityCardProps) => {
   const getAQILevel = (value: number) => {
     if (value <= 25) return { level: "ดี", color: "bg-aqi-good", textColor: "text-aqi-good" };
     if (value <= 37) return { level: "ปานกลาง", color: "bg-aqi-moderate", textColor: "text-aqi-moderate" };
@@ -17,7 +22,7 @@ export const AirQualityCard = ({ pm25, location, timestamp }: AirQualityCardProp
     return { level: "อันตราย", color: "bg-aqi-hazardous", textColor: "text-aqi-hazardous" };
   };
 
-  const aqi = getAQILevel(pm25);
+  const aqiLevel = getAQILevel(pm25);
   const isUnsafe = pm25 > 37;
 
   return (
@@ -32,6 +37,9 @@ export const AirQualityCard = ({ pm25, location, timestamp }: AirQualityCardProp
             {timestamp && (
               <p className="text-sm text-muted-foreground">{timestamp}</p>
             )}
+            {source && (
+              <p className="text-xs text-muted-foreground">แหล่งข้อมูล: {source}</p>
+            )}
           </div>
           {isUnsafe && (
             <AlertTriangle className="w-6 h-6 text-destructive animate-pulse" />
@@ -40,23 +48,50 @@ export const AirQualityCard = ({ pm25, location, timestamp }: AirQualityCardProp
 
         <div className="space-y-3">
           <div className="flex items-baseline gap-2">
-            <span className={`text-5xl font-bold ${aqi.textColor}`}>
+            <span className={`text-5xl font-bold ${aqiLevel.textColor}`}>
               {pm25}
             </span>
             <span className="text-xl text-muted-foreground">µg/m³</span>
           </div>
 
-          <Badge className={`${aqi.color} text-white border-0`}>
-            {aqi.level}
+          <Badge className={`${aqiLevel.color} text-white border-0`}>
+            {aqiLevel.level}
           </Badge>
         </div>
 
         <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
           <div 
-            className={`h-full ${aqi.color} transition-all duration-500`}
+            className={`h-full ${aqiLevel.color} transition-all duration-500`}
             style={{ width: `${Math.min((pm25 / 150) * 100, 100)}%` }}
           />
         </div>
+
+        {/* Additional pollutants info */}
+        {(pm10 !== undefined || no2 !== undefined || o3 !== undefined) && (
+          <div className="pt-3 border-t border-border">
+            <p className="text-xs text-muted-foreground mb-2">สารมลพิษอื่นๆ</p>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              {pm10 !== undefined && (
+                <div className="bg-muted/50 rounded p-2">
+                  <div className="text-muted-foreground">PM10</div>
+                  <div className="font-semibold">{pm10} µg/m³</div>
+                </div>
+              )}
+              {no2 !== undefined && (
+                <div className="bg-muted/50 rounded p-2">
+                  <div className="text-muted-foreground">NO₂</div>
+                  <div className="font-semibold">{no2} µg/m³</div>
+                </div>
+              )}
+              {o3 !== undefined && (
+                <div className="bg-muted/50 rounded p-2">
+                  <div className="text-muted-foreground">O₃</div>
+                  <div className="font-semibold">{o3} µg/m³</div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </Card>
   );
