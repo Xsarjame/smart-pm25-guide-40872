@@ -90,22 +90,29 @@ serve(async (req) => {
           samplePoints.push(coordinates[coordIndex]);
         }
 
-        // Get PM2.5 data for each sample point using Open-Meteo API
+        // Get PM2.5 data for each sample point using IQAir API
+        const IQAIR_API_KEY = Deno.env.get('IQAIR_API_KEY');
+        
+        if (!IQAIR_API_KEY) {
+          console.error('Missing IQAIR_API_KEY');
+          throw new Error('IQAIR_API_KEY not configured');
+        }
+
         const pm25Values = await Promise.all(
           samplePoints.map(async ([lng, lat]) => {
             try {
-              const airQualityUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lng}&current=pm2_5&timezone=auto&domains=cams_global`;
+              const airQualityUrl = `http://api.airvisual.com/v2/nearest_city?lat=${lat}&lon=${lng}&key=${IQAIR_API_KEY}`;
               const response = await fetch(airQualityUrl);
               
               if (!response.ok) {
-                console.error(`Open-Meteo error for ${lat},${lng}:`, response.status);
+                console.error(`IQAir error for ${lat},${lng}:`, response.status);
                 return null;
               }
               
               const data = await response.json();
               
-              if (data.current?.pm2_5 !== undefined) {
-                return data.current.pm2_5;
+              if (data.data?.current?.pollution?.aqius !== undefined) {
+                return data.data.current.pollution.aqius;
               }
               return null;
             } catch (error) {
