@@ -12,63 +12,86 @@ serve(async (req) => {
 
   try {
     const { latitude, longitude } = await req.json();
-    const OWM_API_KEY = Deno.env.get('OPENWEATHER_API_KEY');
-
-    if (!OWM_API_KEY) {
-      throw new Error('OPENWEATHER_API_KEY is not configured');
-    }
 
     console.log('Fetching air quality data for:', { latitude, longitude });
 
-    // Fetch air quality data from OpenWeatherMap
-    const owmAirResponse = await fetch(
-      `https://api.openweathermap.org/data/2.5/air_pollution?lat=${latitude}&lon=${longitude}&appid=${OWM_API_KEY}`
-    );
+    // Fetch air quality data from Open-Meteo (no API key required!)
+    const airQualityUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${latitude}&longitude=${longitude}&current=pm10,pm2_5,nitrogen_dioxide,ozone,sulphur_dioxide,carbon_monoxide&timezone=auto&domains=cams_global`;
+    
+    const airQualityResponse = await fetch(airQualityUrl);
 
-    if (!owmAirResponse.ok) {
-      const errorText = await owmAirResponse.text();
-      console.error('OpenWeatherMap air quality API error:', owmAirResponse.status, errorText);
-      throw new Error(`OpenWeatherMap API error: ${owmAirResponse.status}`);
+    if (!airQualityResponse.ok) {
+      const errorText = await airQualityResponse.text();
+      console.error('Open-Meteo air quality API error:', airQualityResponse.status, errorText);
+      throw new Error(`Open-Meteo API error: ${airQualityResponse.status}`);
     }
 
-    const owmAirData = await owmAirResponse.json();
-    console.log('OpenWeatherMap air quality data received:', owmAirData);
+    const airQualityData = await airQualityResponse.json();
+    console.log('Open-Meteo air quality data received:', airQualityData);
 
-    // Fetch weather data for temperature and humidity
-    const owmWeatherResponse = await fetch(
-      `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${OWM_API_KEY}&units=metric`
-    );
+    // Fetch weather data for temperature and humidity from Open-Meteo
+    const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m&timezone=auto`;
+    
+    const weatherResponse = await fetch(weatherUrl);
 
-    if (!owmWeatherResponse.ok) {
-      const errorText = await owmWeatherResponse.text();
-      console.error('OpenWeatherMap weather API error:', owmWeatherResponse.status, errorText);
-      throw new Error(`OpenWeatherMap weather API error: ${owmWeatherResponse.status}`);
+    if (!weatherResponse.ok) {
+      const errorText = await weatherResponse.text();
+      console.error('Open-Meteo weather API error:', weatherResponse.status, errorText);
+      throw new Error(`Open-Meteo weather API error: ${weatherResponse.status}`);
     }
 
-    const owmWeatherData = await owmWeatherResponse.json();
-    console.log('OpenWeatherMap weather data received:', owmWeatherData);
+    const weatherData = await weatherResponse.json();
+    console.log('Open-Meteo weather data received:', weatherData);
 
-    // Extract all air quality components
-    const components = owmAirData.list?.[0]?.components || {};
-    const aqi = owmAirData.list?.[0]?.main?.aqi || 1;
+    // Fetch location name from Nominatim (OpenStreetMap)
+    const geocodeUrl = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=th`;
     
-    // PM2.5 is the primary pollutant we're tracking
-    const pm25 = Math.round(components.pm2_5 || 0);
-    const pm10 = Math.round(components.pm10 || 0);
-    const no2 = Math.round(components.no2 || 0);
-    const o3 = Math.round(components.o3 || 0);
-    const so2 = Math.round(components.so2 || 0);
-    const co = Math.round(components.co || 0);
+    let location = 'Unknown Location';
+    try {
+      const geocodeResponse = await fetch(geocodeUrl, {
+        headers: {
+          'User-Agent': 'AirQualityApp/1.0'
+        }
+      });
+      
+      if (geocodeResponse.ok) {
+        const geocodeData = await geocodeResponse.json();
+        // Try to get district, city, or village name in Thai
+        location = geocodeData.address?.suburb || 
+                   geocodeData.address?.city || 
+                   geocodeData.address?.town || 
+                   geocodeData.address?.village || 
+                   geocodeData.display_name?.split(',')[0] || 
+                   'Unknown Location';
+      }
+    } catch (error) {
+      console.error('Geocoding error:', error);
+      location = `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`;
+    }
+
+    // Extract air quality data from Open-Meteo
+    const current = airQualityData.current || {};
     
-    // Extract location
-    const location = owmWeatherData.name || 'Unknown Location';
+    const pm25 = Math.round(current.pm2_5 || 0);
+    const pm10 = Math.round(current.pm10 || 0);
+    const no2 = Math.round(current.nitrogen_dioxide || 0);
+    const o3 = Math.round(current.ozone || 0);
+    const so2 = Math.round(current.sulphur_dioxide || 0);
+    const co = Math.round(current.carbon_monoxide || 0);
     
-    // Extract timestamp
+    // Calculate AQI based on PM2.5 (US EPA standard)
+    let aqi = 1;
+    if (pm25 <= 12) aqi = 1;
+    else if (pm25 <= 35.4) aqi = 2;
+    else if (pm25 <= 55.4) aqi = 3;
+    else if (pm25 <= 150.4) aqi = 4;
+    else aqi = 5;
+    
     const timestamp = new Date().toISOString();
 
-    // Get temperature and humidity from OpenWeatherMap weather data
-    const temperature = Math.round(owmWeatherData.main?.temp || 25);
-    const humidity = Math.round(owmWeatherData.main?.humidity || 60);
+    // Get temperature and humidity from Open-Meteo weather data
+    const temperature = Math.round(weatherData.current?.temperature_2m || 25);
+    const humidity = Math.round(weatherData.current?.relative_humidity_2m || 60);
     
     console.log('Processed data:', { 
       pm25, pm10, no2, o3, so2, co, aqi,
@@ -88,7 +111,7 @@ serve(async (req) => {
         timestamp,
         temperature,
         humidity,
-        source: 'OpenWeatherMap'
+        source: 'Open-Meteo (CAMS Global)'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
