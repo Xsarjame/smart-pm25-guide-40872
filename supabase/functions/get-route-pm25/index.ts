@@ -78,11 +78,11 @@ serve(async (req) => {
       routes.map(async (route: any, index: number) => {
         const coordinates = route.geometry.coordinates;
         
-        // Sample points along the route (every 5km approximately)
+        // Sample points along the route every 1km for detailed PM2.5 data
         const samplePoints: number[][] = [];
         const totalDistance = route.distance; // meters
-        const sampleInterval = 5000; // 5km
-        const numSamples = Math.min(Math.ceil(totalDistance / sampleInterval), 10); // Max 10 samples
+        const sampleInterval = 1000; // 1km for detailed real-time data
+        const numSamples = Math.ceil(totalDistance / sampleInterval); // All samples needed
         
         for (let i = 0; i <= numSamples; i++) {
           const ratio = i / numSamples;

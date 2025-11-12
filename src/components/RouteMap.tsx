@@ -312,13 +312,13 @@ export const RouteMap = ({ currentLat, currentLng }: { currentLat: number; curre
             </div>
 
             <div className="p-3 bg-muted/50 rounded-lg">
-              <div className="text-xs space-y-1">
-                <div className="font-medium">ข้อมูลแบบ Real-time</div>
+                <div className="text-xs space-y-1">
+                <div className="font-medium">ข้อมูลแบบ Real-time ทุก 1 กิโลเมตร</div>
                 <div className="text-muted-foreground">
-                  • ค่า PM2.5 วัดจากสถานีตรวจวัดคุณภาพอากาศใกล้เคียงตามเส้นทาง
+                  • ตรวจวัดค่า PM2.5 ทุก 1 กิโลเมตรตลอดเส้นทางจาก Open-Meteo API
                 </div>
                 <div className="text-muted-foreground">
-                  • จุดสีบนแผนที่แสดงค่า PM2.5 ตามจุดต่างๆ ตลอดเส้นทาง
+                  • จุดสีบนแผนที่แสดงค่า PM2.5 แบบ real-time ตามจุดต่างๆ
                 </div>
                 <div className="text-muted-foreground">
                   • เส้นทางแนะนำเลือกจากค่า PM2.5 เฉลี่ยต่ำสุด
