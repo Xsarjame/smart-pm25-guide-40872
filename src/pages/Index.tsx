@@ -8,11 +8,16 @@ import { NearbyHospitals } from "@/components/NearbyHospitals";
 import { AIHealthAdvice } from "@/components/AIHealthAdvice";
 import { HealthChatbot } from "@/components/HealthChatbot";
 import { RouteMap } from "@/components/RouteMap";
+import { LocationMonitorAlert } from "@/components/LocationMonitorAlert";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, RefreshCw, User, Hospital, Loader2, Navigation, MessageSquare } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { MapPin, RefreshCw, User, Hospital, Loader2, Navigation, MessageSquare, Shield } from "lucide-react";
 import heroImage from "@/assets/hero-clean-air.jpg";
 import { useAirQuality } from "@/hooks/useAirQuality";
+import { useLocationMonitor } from "@/hooks/useLocationMonitor";
 import { Geolocation } from '@capacitor/geolocation';
 
 const Index = () => {
@@ -20,6 +25,12 @@ const Index = () => {
   const [userProfile, setUserProfile] = useState<UserHealthProfile | null>(null);
   const [showProfileForm, setShowProfileForm] = useState(false);
   const [currentPosition, setCurrentPosition] = useState<{ lat: number; lng: number } | null>(null);
+  const [monitoringEnabled, setMonitoringEnabled] = useState(true);
+  
+  const { currentAlert, isMonitoring, clearAlert } = useLocationMonitor({
+    userProfile,
+    enabled: monitoringEnabled
+  });
 
   useEffect(() => {
     const savedProfile = localStorage.getItem('healthProfile');
@@ -96,6 +107,17 @@ const Index = () => {
         </div>
       </div>
 
+      {/* Location Monitor Alert - Fixed Position */}
+      {currentAlert && (
+        <LocationMonitorAlert
+          pm25={currentAlert.pm25}
+          location={currentAlert.location}
+          recommendedOutdoorTime={currentAlert.recommendedOutdoorTime}
+          severity={currentAlert.severity}
+          onDismiss={clearAlert}
+        />
+      )}
+
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8 space-y-6 max-w-4xl">
         {/* Alert Notification */}
@@ -104,6 +126,32 @@ const Index = () => {
           location={location}
           hasHealthConditions={userProfile !== null && userProfile.conditions.length > 0}
         />
+
+        {/* Location Monitoring Toggle */}
+        {userProfile && userProfile.conditions.length > 0 && (
+          <Card className="p-4 bg-primary/5 border-primary/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Shield className="w-5 h-5 text-primary" />
+                <div>
+                  <Label htmlFor="location-monitor" className="text-base font-semibold cursor-pointer">
+                    เฝ้าระวังพื้นที่อัตโนมัติ
+                  </Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {isMonitoring 
+                      ? '✅ กำลังติดตามพื้นที่ PM2.5 สูง และจะแจ้งเตือนพร้อมสั่นเครื่อง' 
+                      : '❌ ปิดการแจ้งเตือนอัตโนมัติ'}
+                  </p>
+                </div>
+              </div>
+              <Switch 
+                id="location-monitor"
+                checked={monitoringEnabled}
+                onCheckedChange={setMonitoringEnabled}
+              />
+            </div>
+          </Card>
+        )}
 
         {/* Action Buttons */}
         <div className="flex gap-3 flex-wrap">
