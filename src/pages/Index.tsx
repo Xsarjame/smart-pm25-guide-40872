@@ -9,12 +9,15 @@ import { AIHealthAdvice } from "@/components/AIHealthAdvice";
 import { HealthChatbot } from "@/components/HealthChatbot";
 import { RouteMap } from "@/components/RouteMap";
 import { LocationMonitorAlert } from "@/components/LocationMonitorAlert";
+import { PHRIDisplay } from "@/components/PHRIDisplay";
+import { PHRICalculator } from "@/components/PHRICalculator";
+import { HealthLogsHistory } from "@/components/HealthLogsHistory";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { MapPin, RefreshCw, User, Hospital, Loader2, Navigation, MessageSquare, Shield } from "lucide-react";
+import { MapPin, RefreshCw, User, Hospital, Loader2, Navigation, MessageSquare, Shield, Activity } from "lucide-react";
 import heroImage from "@/assets/hero-clean-air.jpg";
 import { useAirQuality } from "@/hooks/useAirQuality";
 import { useLocationMonitor } from "@/hooks/useLocationMonitor";
@@ -26,6 +29,7 @@ const Index = () => {
   const [showProfileForm, setShowProfileForm] = useState(false);
   const [currentPosition, setCurrentPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [monitoringEnabled, setMonitoringEnabled] = useState(true);
+  const [currentPHRI, setCurrentPHRI] = useState<number | undefined>(undefined);
   
   const { currentAlert, isMonitoring, clearAlert } = useLocationMonitor({
     userProfile,
@@ -191,6 +195,11 @@ const Index = () => {
           source={data?.source}
         />
 
+        {/* PHRI Display */}
+        <PHRIDisplay 
+          phri={currentPHRI}
+        />
+
         {/* User Profile Display or Form */}
         {userProfile && !showProfileForm ? (
           <HealthProfileDisplay 
@@ -206,12 +215,16 @@ const Index = () => {
           </div>
         ) : null}
 
-        {/* Tabs for AI, Chat, Recommendations, Hospitals, and Navigation */}
+        {/* Tabs for AI, Chat, Recommendations, Hospitals, Navigation and PHRI */}
         <Tabs defaultValue="chatbot" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
             <TabsTrigger value="chatbot">
               <MessageSquare className="w-4 h-4 mr-1" />
               Chat
+            </TabsTrigger>
+            <TabsTrigger value="phri">
+              <Activity className="w-4 h-4 mr-1" />
+              PHRI
             </TabsTrigger>
             <TabsTrigger value="ai-advice">AI</TabsTrigger>
             <TabsTrigger value="recommendations">คำแนะนำ</TabsTrigger>
@@ -230,6 +243,15 @@ const Index = () => {
               temperature={data?.temperature || 0}
               humidity={data?.humidity || 0}
             />
+          </TabsContent>
+          <TabsContent value="phri" className="mt-4 space-y-4">
+            <PHRICalculator 
+              currentAQI={data?.aqi || 0}
+              currentPM25={pm25Value}
+              currentLocation={location}
+              onCalculated={(phri) => setCurrentPHRI(phri)}
+            />
+            <HealthLogsHistory />
           </TabsContent>
           <TabsContent value="ai-advice" className="mt-4">
             <AIHealthAdvice

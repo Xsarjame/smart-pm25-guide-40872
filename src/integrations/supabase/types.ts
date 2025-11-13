@@ -14,7 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      health_logs: {
+        Row: {
+          age: number
+          aqi: number
+          created_at: string
+          gender: string | null
+          has_symptoms: boolean | null
+          id: string
+          location: string | null
+          log_date: string
+          outdoor_time: number
+          phri: number
+          pm25: number
+          symptoms: string[] | null
+          user_id: string
+        }
+        Insert: {
+          age: number
+          aqi: number
+          created_at?: string
+          gender?: string | null
+          has_symptoms?: boolean | null
+          id?: string
+          location?: string | null
+          log_date?: string
+          outdoor_time: number
+          phri: number
+          pm25: number
+          symptoms?: string[] | null
+          user_id: string
+        }
+        Update: {
+          age?: number
+          aqi?: number
+          created_at?: string
+          gender?: string | null
+          has_symptoms?: boolean | null
+          id?: string
+          location?: string | null
+          log_date?: string
+          outdoor_time?: number
+          phri?: number
+          pm25?: number
+          symptoms?: string[] | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
