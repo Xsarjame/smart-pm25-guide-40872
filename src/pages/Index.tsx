@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { AirQualityCard } from "@/components/AirQualityCard";
 import { HealthProfileForm, UserHealthProfile } from "@/components/HealthProfileForm";
 import { HealthProfileDisplay } from "@/components/HealthProfileDisplay";
@@ -17,13 +19,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { MapPin, RefreshCw, User, Hospital, Loader2, Navigation, MessageSquare, Shield, Activity } from "lucide-react";
+import { MapPin, RefreshCw, User, Hospital, Loader2, Navigation, MessageSquare, Shield, Activity, LogOut } from "lucide-react";
 import heroImage from "@/assets/hero-clean-air.jpg";
 import { useAirQuality } from "@/hooks/useAirQuality";
 import { useLocationMonitor } from "@/hooks/useLocationMonitor";
 import { Geolocation } from '@capacitor/geolocation';
 
 const Index = () => {
+  const navigate = useNavigate();
+  const [authUser, setAuthUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const { data, loading, refresh } = useAirQuality();
   const [userProfile, setUserProfile] = useState<UserHealthProfile | null>(null);
   const [showProfileForm, setShowProfileForm] = useState(false);
@@ -35,6 +40,28 @@ const Index = () => {
     userProfile,
     enabled: monitoringEnabled
   });
+
+  // Check authentication
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        navigate('/auth');
+      } else {
+        setAuthUser(session.user);
+      }
+      setAuthLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!session) {
+        navigate('/auth');
+      } else {
+        setAuthUser(session.user);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   useEffect(() => {
     const savedProfile = localStorage.getItem('healthProfile');
@@ -71,6 +98,18 @@ const Index = () => {
     setShowProfileForm(true);
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   const pm25Value = data?.pm25 || 0;
   const location = data?.location || 'กำลังโหลด...';
   const currentTime = data?.timestamp 
@@ -91,6 +130,20 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-sky">
+      {/* User Menu */}
+      <div className="container mx-auto px-4 pt-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <User className="h-4 w-4" />
+            <span className="truncate max-w-[200px]">{authUser?.email}</span>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleLogout}>
+            <LogOut className="h-4 w-4 mr-2" />
+            ออกจากระบบ
+          </Button>
+        </div>
+      </div>
+
       {/* Hero Section */}
       <div className="relative h-48 md:h-64 overflow-hidden">
         <img 
