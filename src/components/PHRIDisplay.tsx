@@ -16,16 +16,20 @@ export const PHRIDisplay = ({ phri, riskLevel, advice }: PHRIDisplayProps) => {
 
   useEffect(() => {
     const loadLatestLog = async () => {
-      const logs = await fetchHealthLogs(1);
-      if (logs.length > 0) {
-        setLatestLog(logs[0]);
+      try {
+        const logs = await fetchHealthLogs(1);
+        if (logs && logs.length > 0) {
+          setLatestLog(logs[0]);
+        }
+      } catch (error) {
+        console.error('Error loading latest log:', error);
       }
     };
     
     if (!phri) {
       loadLatestLog();
     }
-  }, [phri]);
+  }, [phri, fetchHealthLogs]);
 
   const displayPHRI = phri ?? latestLog?.phri;
   const displayRiskLevel = riskLevel ?? (

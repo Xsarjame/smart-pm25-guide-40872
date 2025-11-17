@@ -20,6 +20,7 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { MapPin, RefreshCw, User, Hospital, Loader2, Navigation, MessageSquare, Shield, Activity, LogOut } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import heroImage from "@/assets/hero-clean-air.jpg";
 import { useAirQuality } from "@/hooks/useAirQuality";
 import { useLocationMonitor } from "@/hooks/useLocationMonitor";
@@ -99,7 +100,21 @@ const Index = () => {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      toast({
+        title: 'ออกจากระบบสำเร็จ',
+      });
+    } catch (error: any) {
+      console.error('Error signing out:', error);
+      toast({
+        title: 'เกิดข้อผิดพลาด',
+        description: 'ไม่สามารถออกจากระบบได้',
+        variant: 'destructive',
+      });
+    }
   };
 
   if (authLoading) {

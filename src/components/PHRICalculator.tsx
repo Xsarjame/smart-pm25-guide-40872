@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { usePHRI } from '@/hooks/usePHRI';
+import { toast } from '@/hooks/use-toast';
 import { Clock, User, Activity } from 'lucide-react';
 
 interface PHRICalculatorProps {
@@ -46,30 +47,52 @@ export const PHRICalculator = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate inputs
     if (!outdoorTime || !age) {
+      toast({
+        title: 'กรุณากรอกข้อมูลให้ครบ',
+        description: 'กรุณากรอกเวลาที่อยู่กลางแจ้งและอายุ',
+        variant: 'destructive',
+      });
       return;
     }
 
-    const result = await saveHealthLog({
-      aqi: currentAQI,
-      pm25: currentPM25,
-      outdoorTime: parseInt(outdoorTime),
-      age: parseInt(age),
-      gender,
-      hasSymptoms: selectedSymptoms.length > 0,
-      symptoms: selectedSymptoms,
-      location: currentLocation,
-    });
+    const outdoorTimeNum = parseInt(outdoorTime);
+    const ageNum = parseInt(age);
 
-    if (result && onCalculated) {
-      onCalculated(result.phri);
+    if (outdoorTimeNum <= 0 || ageNum <= 0) {
+      toast({
+        title: 'ข้อมูลไม่ถูกต้อง',
+        description: 'กรุณากรอกตัวเลขที่มากกว่า 0',
+        variant: 'destructive',
+      });
+      return;
     }
 
-    // Reset form
-    setOutdoorTime('');
-    setAge('');
-    setGender('');
-    setSelectedSymptoms([]);
+    try {
+      const result = await saveHealthLog({
+        aqi: currentAQI,
+        pm25: currentPM25,
+        outdoorTime: outdoorTimeNum,
+        age: ageNum,
+        gender: gender || 'ไม่ระบุ',
+        hasSymptoms: selectedSymptoms.length > 0,
+        symptoms: selectedSymptoms,
+        location: currentLocation,
+      });
+
+      if (result && onCalculated) {
+        onCalculated(result.phri);
+      }
+
+      // Reset form
+      setOutdoorTime('');
+      setAge('');
+      setGender('');
+      setSelectedSymptoms([]);
+    } catch (error) {
+      console.error('Error submitting PHRI data:', error);
+    }
   };
 
   return (

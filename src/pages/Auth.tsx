@@ -35,11 +35,31 @@ export default function Auth() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate inputs
+    if (!email || !password) {
+      toast({
+        title: 'กรุณากรอกข้อมูลให้ครบ',
+        description: 'กรุณากรอกอีเมลและรหัสผ่าน',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (password.length < 6) {
+      toast({
+        title: 'รหัสผ่านสั้นเกินไป',
+        description: 'รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
@@ -48,14 +68,24 @@ export default function Auth() {
 
       if (error) throw error;
 
-      toast({
-        title: 'สมัครสมาชิกสำเร็จ',
-        description: 'คุณสามารถเข้าสู่ระบบได้ทันที',
-      });
+      if (data?.user) {
+        toast({
+          title: 'สมัครสมาชิกสำเร็จ',
+          description: 'คุณสามารถเข้าสู่ระบบได้ทันที',
+        });
+      }
     } catch (error: any) {
+      let errorMessage = 'ไม่สามารถสมัครสมาชิกได้';
+      
+      if (error.message?.includes('already registered')) {
+        errorMessage = 'อีเมลนี้ถูกใช้งานแล้ว กรุณาเข้าสู่ระบบหรือใช้อีเมลอื่น';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       toast({
         title: 'เกิดข้อผิดพลาด',
-        description: error.message || 'ไม่สามารถสมัครสมาชิกได้',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -65,23 +95,47 @@ export default function Auth() {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate inputs
+    if (!email || !password) {
+      toast({
+        title: 'กรุณากรอกข้อมูลให้ครบ',
+        description: 'กรุณากรอกอีเมลและรหัสผ่าน',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
         password,
       });
 
       if (error) throw error;
 
-      toast({
-        title: 'เข้าสู่ระบบสำเร็จ',
-      });
+      if (data?.user) {
+        toast({
+          title: 'เข้าสู่ระบบสำเร็จ',
+          description: `ยินดีต้อนรับ ${data.user.email}`,
+        });
+      }
     } catch (error: any) {
+      let errorMessage = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
+      
+      if (error.message?.includes('Invalid login credentials')) {
+        errorMessage = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
+      } else if (error.message?.includes('Email not confirmed')) {
+        errorMessage = 'กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       toast({
         title: 'เกิดข้อผิดพลาด',
-        description: error.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
