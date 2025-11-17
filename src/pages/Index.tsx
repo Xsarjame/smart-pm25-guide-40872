@@ -13,6 +13,7 @@ import { RouteMap } from "@/components/RouteMap";
 import { LocationMonitorAlert } from "@/components/LocationMonitorAlert";
 import { PHRIDisplay } from "@/components/PHRIDisplay";
 import { PHRICalculator } from "@/components/PHRICalculator";
+import { PHRIComparison } from "@/components/PHRIComparison";
 import { HealthLogsHistory } from "@/components/HealthLogsHistory";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -267,6 +268,9 @@ const Index = () => {
         <PHRIDisplay 
           phri={currentPHRI}
         />
+
+        {/* PHRI Comparison */}
+        <PHRIComparison />
 
         {/* User Profile Display or Form */}
         {userProfile && !showProfileForm ? (
