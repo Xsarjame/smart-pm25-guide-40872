@@ -126,23 +126,36 @@ export const usePHRI = () => {
     }
   };
 
-  // Fetch health logs history
-  const fetchHealthLogs = async (limit = 30) => {
+  // Fetch health logs with better error handling
+  const fetchHealthLogs = async (limit: number = 10) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error('Error getting user:', userError);
+        return [];
+      }
+      
+      if (!user) {
+        console.log('No authenticated user');
+        return [];
+      }
 
       const { data, error } = await supabase
         .from('health_logs')
         .select('*')
         .eq('user_id', user.id)
-        .order('log_date', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(limit);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching health logs:', error);
+        return [];
+      }
+      
       return data || [];
     } catch (error) {
-      console.error('Error fetching health logs:', error);
+      console.error('Unexpected error fetching health logs:', error);
       return [];
     }
   };

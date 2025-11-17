@@ -16,9 +16,15 @@ export const HealthLogsHistory = () => {
 
   const loadLogs = async () => {
     setLoading(true);
-    const data = await fetchHealthLogs(30);
-    setLogs(data);
-    setLoading(false);
+    try {
+      const data = await fetchHealthLogs(30);
+      setLogs(data || []);
+    } catch (error) {
+      console.error('Error loading logs:', error);
+      setLogs([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getRiskLevel = (phri: number): 'safe' | 'moderate' | 'high' => {
