@@ -16,52 +16,124 @@ export type Database = {
     Tables: {
       health_logs: {
         Row: {
+          accuracy: number | null
           age: number
+          app_version: string | null
           aqi: number
+          co: number | null
           created_at: string
+          data_source: string | null
+          device_id: string | null
           gender: string | null
           has_symptoms: boolean | null
           id: string
+          is_exercising: boolean | null
+          latitude: number | null
           location: string | null
           log_date: string
+          longitude: number | null
+          movement_state: string | null
+          no2: number | null
+          o3: number | null
           outdoor_time: number
           phri: number
+          pm10: number | null
           pm25: number
           symptoms: string[] | null
+          timezone: string | null
           user_id: string
           wearing_mask: boolean | null
         }
         Insert: {
+          accuracy?: number | null
           age: number
+          app_version?: string | null
           aqi: number
+          co?: number | null
           created_at?: string
+          data_source?: string | null
+          device_id?: string | null
           gender?: string | null
           has_symptoms?: boolean | null
           id?: string
+          is_exercising?: boolean | null
+          latitude?: number | null
           location?: string | null
           log_date?: string
+          longitude?: number | null
+          movement_state?: string | null
+          no2?: number | null
+          o3?: number | null
           outdoor_time: number
           phri: number
+          pm10?: number | null
           pm25: number
           symptoms?: string[] | null
+          timezone?: string | null
           user_id: string
           wearing_mask?: boolean | null
         }
         Update: {
+          accuracy?: number | null
           age?: number
+          app_version?: string | null
           aqi?: number
+          co?: number | null
           created_at?: string
+          data_source?: string | null
+          device_id?: string | null
           gender?: string | null
           has_symptoms?: boolean | null
           id?: string
+          is_exercising?: boolean | null
+          latitude?: number | null
           location?: string | null
           log_date?: string
+          longitude?: number | null
+          movement_state?: string | null
+          no2?: number | null
+          o3?: number | null
           outdoor_time?: number
           phri?: number
+          pm10?: number | null
           pm25?: number
           symptoms?: string[] | null
+          timezone?: string | null
           user_id?: string
           wearing_mask?: boolean | null
+        }
+        Relationships: []
+      }
+      user_profiles: {
+        Row: {
+          age: number | null
+          chronic_diseases: string[] | null
+          created_at: string | null
+          gender: string | null
+          id: string
+          sensitivity_level: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          age?: number | null
+          chronic_diseases?: string[] | null
+          created_at?: string | null
+          gender?: string | null
+          id?: string
+          sensitivity_level?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          age?: number | null
+          chronic_diseases?: string[] | null
+          created_at?: string | null
+          gender?: string | null
+          id?: string
+          sensitivity_level?: string | null
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
