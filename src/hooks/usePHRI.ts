@@ -25,10 +25,36 @@ interface PHRIResult {
 export const usePHRI = () => {
   const [loading, setLoading] = useState(false);
 
-  // Calculate PHRI using the formula: PHRI = (AQI × OutdoorTime) / (Age × HealthFactor)
+  // Normalize PM2.5 to 0-100 scale for more accurate risk calculation
+  const normalizePM25 = (pm25: number): number => {
+    // WHO interim targets: 0 -> 0 ; 35 (WHO interim) -> 50 ; 150 -> 100 (severe)
+    if (pm25 <= 0) return 0;
+    if (pm25 <= 35) return (pm25 / 35) * 50;
+    if (pm25 <= 150) return 50 + ((pm25 - 35) / (150 - 35)) * 50;
+    return 100;
+  };
+
+  // Calculate PHRI using enhanced model:
+  // PHRI = normalized_PM25 × exposureFactor × symptomFactor × ageFactor × maskFactor
   const calculatePHRI = (data: PHRIData): PHRIResult => {
-    const healthFactor = data.hasSymptoms ? 1 : 0.8;
-    const phri = (data.aqi * data.outdoorTime) / (data.age * healthFactor);
+    // Normalize PM2.5 concentration to 0-100 scale
+    const normalizedPM25 = normalizePM25(data.pm25);
+    
+    // Exposure factor: based on outdoor time (1.0 to 2.0)
+    // More time outdoors = higher exposure
+    const exposureFactor = 1 + Math.min(data.outdoorTime / 60, 1); // 0-60+ mins -> 1.0-2.0
+    
+    // Symptom factor: having symptoms increases vulnerability
+    const symptomFactor = data.hasSymptoms ? 1.4 : 1.0;
+    
+    // Age factor: children and elderly are more vulnerable
+    const ageFactor = data.age < 12 ? 1.2 : data.age > 65 ? 1.3 : 1.0;
+    
+    // Mask factor: wearing mask reduces risk significantly
+    const maskFactor = data.wearingMask ? 0.5 : 1.0;
+    
+    // Calculate final PHRI (0-200 scale)
+    const phri = normalizedPM25 * exposureFactor * symptomFactor * ageFactor * maskFactor;
 
     let riskLevel: 'safe' | 'moderate' | 'high' = 'safe';
     let color = 'hsl(var(--success))';
@@ -37,11 +63,19 @@ export const usePHRI = () => {
     if (phri >= 100) {
       riskLevel = 'high';
       color = 'hsl(var(--destructive))';
-      advice = 'ควรพักในร่มทันที และสังเกตอาการผิดปกติ';
+      advice = data.wearingMask 
+        ? 'ความเสี่ยงสูง - ควรลดเวลาอยู่กลางแจ้งและสังเกตอาการ' 
+        : 'ความเสี่ยงสูงมาก! ควรอยู่ในร่มทันที หากจำเป็นต้องออกควรสวมหน้ากาก N95';
     } else if (phri >= 50) {
       riskLevel = 'moderate';
       color = 'hsl(var(--warning))';
-      advice = 'ควรสวมหน้ากาก N95 และลดเวลาอยู่กลางแจ้ง';
+      advice = data.wearingMask
+        ? 'ความเสี่ยงปานกลาง - ลดเวลาอยู่กลางแจ้งและดูแลสุขภาพ'
+        : 'ความเสี่ยงปานกลาง - ควรสวมหน้ากาก N95 และลดเวลาอยู่กลางแจ้ง';
+    } else {
+      advice = data.pm25 > 35 && !data.wearingMask
+        ? 'ค่าฝุ่นเริ่มสูง แนะนำให้สวมหน้ากากเมื่ออยู่กลางแจ้งนาน'
+        : 'สามารถทำกิจกรรมกลางแจ้งได้ตามปกติ';
     }
 
     return { phri: Math.round(phri * 100) / 100, riskLevel, color, advice };

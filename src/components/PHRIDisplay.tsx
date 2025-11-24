@@ -99,59 +99,76 @@ export const PHRIDisplay = ({ phri, riskLevel, advice }: PHRIDisplayProps) => {
   };
 
   return (
-    <Card className="w-full border-2" style={{ borderColor: getColor() }}>
-      <CardHeader>
+    <Card className="w-full overflow-hidden shadow-lg">
+      <div 
+        className="h-2 w-full"
+        style={{ backgroundColor: getColor() }}
+      />
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg">
             <span style={{ color: getColor() }}>{getIcon()}</span>
-            ดัชนีความเสี่ยงสุขภาพส่วนบุคคล
+            PHRI (Personal Health Risk Index)
           </CardTitle>
-          <Badge variant={getBadgeVariant() as any}>
+          <Badge variant={getBadgeVariant() as any} className="text-sm px-3 py-1">
             {getRiskText()}
           </Badge>
         </div>
+        <CardDescription className="text-xs">
+          ดัชนีความเสี่ยงสุขภาพส่วนบุคคล - อัพเดทล่าสุด
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="text-center">
+      <CardContent className="space-y-5 pb-6">
+        <div className="text-center py-4">
           <div 
-            className="text-6xl font-bold mb-2" 
+            className="text-7xl font-bold mb-1 animate-in fade-in duration-500" 
             style={{ color: getColor() }}
           >
             {displayPHRI.toFixed(1)}
           </div>
-          <div className="text-sm text-muted-foreground">PHRI Index</div>
+          <div className="text-sm text-muted-foreground font-medium">ระดับความเสี่ยง</div>
         </div>
 
         <div 
-          className="p-4 rounded-lg"
+          className="p-4 rounded-xl border-2"
           style={{ 
-            backgroundColor: `${getColor()}15`,
-            border: `1px solid ${getColor()}30`
+            backgroundColor: `${getColor()}08`,
+            borderColor: `${getColor()}40`
           }}
         >
-          <p className="text-sm font-medium text-center">
-            {displayAdvice}
-          </p>
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5" style={{ color: getColor() }}>
+              {displayRiskLevel === 'high' ? '⚠️' : displayRiskLevel === 'moderate' ? '⚡' : '✅'}
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold mb-1" style={{ color: getColor() }}>
+                คำแนะนำ:
+              </p>
+              <p className="text-sm leading-relaxed">
+                {displayAdvice}
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground text-center pt-2 border-t">
-          <div>
-            <div className="font-semibold" style={{ color: 'hsl(var(--success))' }}>
+        <div className="grid grid-cols-3 gap-3 pt-3 border-t">
+          <div className="text-center p-3 rounded-lg bg-success/10">
+            <div className="text-xl font-bold text-success mb-1">
               &lt; 50
             </div>
-            <div>ปลอดภัย</div>
+            <div className="text-xs text-muted-foreground">ปลอดภัย</div>
           </div>
-          <div>
-            <div className="font-semibold" style={{ color: 'hsl(var(--warning))' }}>
+          <div className="text-center p-3 rounded-lg bg-warning/10">
+            <div className="text-xl font-bold text-warning mb-1">
               50-100
             </div>
-            <div>ปานกลาง</div>
+            <div className="text-xs text-muted-foreground">ปานกลาง</div>
           </div>
-          <div>
-            <div className="font-semibold" style={{ color: 'hsl(var(--destructive))' }}>
+          <div className="text-center p-3 rounded-lg bg-destructive/10">
+            <div className="text-xl font-bold text-destructive mb-1">
               &gt; 100
             </div>
-            <div>เสี่ยงสูง</div>
+            <div className="text-xs text-muted-foreground">เสี่ยงสูง</div>
           </div>
         </div>
       </CardContent>
