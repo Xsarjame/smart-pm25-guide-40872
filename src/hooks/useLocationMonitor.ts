@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Geolocation } from '@capacitor/geolocation';
-import { LocalNotifications } from '@capacitor/local-notifications';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
 import { UserHealthProfile } from '@/components/HealthProfileForm';
+import { useUnifiedNotifications } from './useUnifiedNotifications';
 
 interface LocationMonitorConfig {
   userProfile: UserHealthProfile | null;
@@ -21,6 +22,7 @@ export const useLocationMonitor = ({ userProfile, enabled }: LocationMonitorConf
   const [currentAlert, setCurrentAlert] = useState<PM25Alert | null>(null);
   const watchIdRef = useRef<string | null>(null);
   const lastAlertTimeRef = useRef<number>(0);
+  const { sendNotification } = useUnifiedNotifications();
 
   // Calculate recommended outdoor time based on PM2.5 and health conditions
   const calculateOutdoorTime = (pm25: number, hasHighRiskConditions: boolean): number => {
@@ -40,59 +42,44 @@ export const useLocationMonitor = ({ userProfile, enabled }: LocationMonitorConf
 
   // Trigger haptic feedback
   const triggerVibration = async () => {
-    try {
-      await Haptics.impact({ style: ImpactStyle.Heavy });
-      // Double vibration for emphasis
-      setTimeout(async () => {
+    if (Capacitor.isNativePlatform()) {
+      try {
         await Haptics.impact({ style: ImpactStyle.Heavy });
-      }, 300);
-    } catch (error) {
-      console.error('Haptics error:', error);
+        // Double vibration for emphasis
+        setTimeout(async () => {
+          await Haptics.impact({ style: ImpactStyle.Heavy });
+        }, 300);
+      } catch (error) {
+        console.error('Haptics error:', error);
+      }
+    } else if ('vibrate' in navigator) {
+      // PWA vibration
+      navigator.vibrate([200, 100, 200]);
     }
   };
 
-  // Send local notification
-  const sendNotification = async (alert: PM25Alert) => {
-    try {
-      const permission = await LocalNotifications.requestPermissions();
-      if (permission.display !== 'granted') return;
+  // Send unified notification (Native + PWA)
+  const sendAlert = async (alert: PM25Alert) => {
+    const isHighRisk = hasHighRiskConditions();
+    let title = '';
+    let body = '';
 
-      const isHighRisk = hasHighRiskConditions();
-      let title = '';
-      let body = '';
-
-      if (alert.severity === 'critical') {
-        title = '⚠️ เตือนภัย! PM2.5 อันตราย';
-        body = isHighRisk 
-          ? `ค่าฝุ่น ${alert.pm25} µg/m³ - คุณมีโรคประจำตัวกลุ่มเสี่ยง ควรอยู่ในอาคารไม่เกิน ${alert.recommendedOutdoorTime} นาที!`
-          : `ค่าฝุ่น ${alert.pm25} µg/m³ - ควรจำกัดเวลาอยู่นอกอาคารไม่เกิน ${alert.recommendedOutdoorTime} นาที`;
-      } else if (alert.severity === 'high') {
-        title = '⚠️ แจ้งเตือน: PM2.5 สูง';
-        body = isHighRisk
-          ? `คุณเข้าพื้นที่ PM2.5 ${alert.pm25} µg/m³ - แนะนำให้อยู่นอกอาคารไม่เกิน ${alert.recommendedOutdoorTime} นาที`
-          : `PM2.5 ${alert.pm25} µg/m³ - แนะนำจำกัดเวลานอกอาคาร ${alert.recommendedOutdoorTime} นาที`;
-      } else {
-        title = 'แจ้งเตือน: ค่าฝุ่นเพิ่มขึ้น';
-        body = `PM2.5 ${alert.pm25} µg/m³ ที่ ${alert.location}`;
-      }
-
-      await LocalNotifications.schedule({
-        notifications: [
-          {
-            title,
-            body,
-            id: Date.now(),
-            schedule: { at: new Date(Date.now() + 100) },
-            sound: 'default',
-            attachments: undefined,
-            actionTypeId: '',
-            extra: null
-          }
-        ]
-      });
-    } catch (error) {
-      console.error('Notification error:', error);
+    if (alert.severity === 'critical') {
+      title = '⚠️ เตือนภัย! PM2.5 อันตราย';
+      body = isHighRisk 
+        ? `ค่าฝุ่น ${alert.pm25} µg/m³ - คุณมีโรคประจำตัวกลุ่มเสี่ยง ควรอยู่ในอาคารไม่เกิน ${alert.recommendedOutdoorTime} นาที!`
+        : `ค่าฝุ่น ${alert.pm25} µg/m³ - ควรจำกัดเวลาอยู่นอกอาคารไม่เกิน ${alert.recommendedOutdoorTime} นาที`;
+    } else if (alert.severity === 'high') {
+      title = '⚠️ แจ้งเตือน: PM2.5 สูง';
+      body = isHighRisk
+        ? `คุณเข้าพื้นที่ PM2.5 ${alert.pm25} µg/m³ - แนะนำให้อยู่นอกอาคารไม่เกิน ${alert.recommendedOutdoorTime} นาที`
+        : `PM2.5 ${alert.pm25} µg/m³ - แนะนำจำกัดเวลานอกอาคาร ${alert.recommendedOutdoorTime} นาที`;
+    } else {
+      title = 'แจ้งเตือน: ค่าฝุ่นเพิ่มขึ้น';
+      body = `PM2.5 ${alert.pm25} µg/m³ ที่ ${alert.location}`;
     }
+
+    await sendNotification({ title, body, tag: 'pm25-alert' });
   };
 
   // Fetch PM2.5 for current location
@@ -134,7 +121,7 @@ export const useLocationMonitor = ({ userProfile, enabled }: LocationMonitorConf
             await triggerVibration();
           }
           
-          await sendNotification(alert);
+          await sendAlert(alert);
         }
       } else {
         setCurrentAlert(null);
