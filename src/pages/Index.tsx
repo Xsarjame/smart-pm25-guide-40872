@@ -54,8 +54,8 @@ const Index = () => {
     isOutdoors,
     isWearingMask,
     shouldPromptMask,
-    confirmWearingMask,
-    confirmNotWearingMask,
+    maskDetection,
+    isInVehicleOrBuilding,
   } = useOutdoorDetection({
     pm25: data?.pm25 || 0,
     enabled: monitoringEnabled,
@@ -272,8 +272,8 @@ const Index = () => {
         <MaskConfirmationDialog
           open={shouldPromptMask}
           pm25={pm25Value}
-          onConfirmWearing={confirmWearingMask}
-          onConfirmNotWearing={confirmNotWearingMask}
+          faceDetected={maskDetection.faceDetected}
+          confidence={maskDetection.confidence}
         />
 
         {/* Action Buttons */}
@@ -305,19 +305,35 @@ const Index = () => {
         {/* Outdoor Status Indicator */}
         {isOutdoors && (
           <Card className="p-4 bg-orange-500/10 border-orange-500/30">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <MapPin className="w-5 h-5 text-orange-500" />
-                <div>
-                  <p className="font-semibold text-orange-700 dark:text-orange-400">
-                    🚶 คุณอยู่นอกบ้าน
+            <div className="flex items-center gap-3">
+              <MapPin className="w-5 h-5 text-orange-500" />
+              <div className="flex-1 space-y-2">
+                <p className="font-semibold text-orange-700 dark:text-orange-400">
+                  🚶 คุณอยู่นอกบ้าน
+                </p>
+                
+                {isInVehicleOrBuilding && (
+                  <p className="text-sm text-blue-600 dark:text-blue-400">
+                    🚗 ตรวจพบว่าคุณอยู่ในรถ/อาคาร - ปิดการตรวจจับหน้ากาก
                   </p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {isWearingMask === true && '✅ ใส่หน้ากากแล้ว'}
-                    {isWearingMask === false && '⚠️ ยังไม่ได้ใส่หน้ากาก'}
-                    {isWearingMask === null && 'กำลังตรวจสอบ...'}
+                )}
+                
+                {!isInVehicleOrBuilding && maskDetection.faceDetected && (
+                  <div className="text-sm space-y-1">
+                    <p className="font-medium">
+                      🎥 การตรวจจับด้วยกล้อง: {maskDetection.isWearingMask ? '✅ ใส่หน้ากากแล้ว' : '❌ ไม่ได้ใส่หน้ากาก'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      ความแม่นยำ: {Math.round(maskDetection.confidence * 100)}%
+                    </p>
+                  </div>
+                )}
+                
+                {!isInVehicleOrBuilding && !maskDetection.faceDetected && (
+                  <p className="text-sm text-muted-foreground">
+                    🎥 กำลังค้นหาใบหน้า...
                   </p>
-                </div>
+                )}
               </div>
             </div>
           </Card>

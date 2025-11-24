@@ -6,69 +6,58 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
-import { Shield, AlertTriangle } from 'lucide-react';
+} from "@/components/ui/alert-dialog";
+import { Camera } from "lucide-react";
 
 interface MaskConfirmationDialogProps {
   open: boolean;
   pm25: number;
-  onConfirmWearing: () => void;
-  onConfirmNotWearing: () => void;
+  faceDetected: boolean;
+  confidence: number;
 }
 
 export const MaskConfirmationDialog = ({
   open,
   pm25,
-  onConfirmWearing,
-  onConfirmNotWearing,
+  faceDetected,
+  confidence,
 }: MaskConfirmationDialogProps) => {
   return (
     <AlertDialog open={open}>
-      <AlertDialogContent className="max-w-md">
+      <AlertDialogContent className="bg-gradient-alert border-destructive">
         <AlertDialogHeader>
-          <div className="flex items-center gap-2 text-destructive">
-            <AlertTriangle className="h-6 w-6" />
-            <AlertDialogTitle>คุณอยู่นอกบ้าน!</AlertDialogTitle>
-          </div>
-          <AlertDialogDescription className="space-y-3 pt-2">
-            <div className="p-4 bg-destructive/10 rounded-lg border border-destructive/20">
-              <p className="text-sm font-semibold text-destructive">
-                ค่า PM2.5 สูงถึง {pm25} µg/m³
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                ระดับอันตรายต่อสุขภาพ
-              </p>
-            </div>
-            
-            <p className="text-base font-medium text-foreground">
-              คุณใส่หน้ากากอนามัยแล้วหรือยัง?
+          <AlertDialogTitle className="text-white text-xl font-bold flex items-center gap-2">
+            <Camera className="h-6 w-6 animate-pulse" />
+            ⚠️ ตรวจพบไม่ได้สวมหน้ากาก!
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-white/90 text-base space-y-3">
+            <p className="font-semibold">
+              ขณะนี้ค่า PM2.5 อยู่ที่ <span className="text-white font-bold text-lg">{pm25} µg/m³</span>
             </p>
-
-            <div className="p-3 bg-muted/50 rounded-lg">
-              <p className="text-sm text-muted-foreground">
-                ⚠️ หากยังไม่ได้ใส่ ระบบจะสั่นเตือนอย่างต่อเนื่องจนกว่าคุณจะยืนยัน
-              </p>
-            </div>
+            <p className="bg-white/20 p-3 rounded-lg">
+              🎥 <span className="font-semibold">ระบบตรวจจับด้วยกล้อง:</span><br />
+              {faceDetected ? (
+                <>
+                  ✅ ตรวจพบใบหน้า (ความแม่นยำ {Math.round(confidence * 100)}%)<br />
+                  <span className="text-destructive-foreground font-bold">❌ ไม่พบหน้ากากอนามัย</span>
+                </>
+              ) : (
+                <span className="text-yellow-200">⚠️ กำลังวิเคราะห์ใบหน้า...</span>
+              )}
+            </p>
+            <p className="font-bold text-white text-lg animate-pulse">
+              กรุณาสวมหน้ากากอนามัยทันที!
+            </p>
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
+        <AlertDialogFooter>
           <AlertDialogAction
-            onClick={onConfirmWearing}
-            className="w-full bg-success hover:bg-success/90"
+            className="bg-primary hover:bg-primary/90 text-white font-semibold w-full"
           >
-            <Shield className="mr-2 h-4 w-4" />
-            ✅ ใส่หน้ากากแล้ว
+            รับทราบ
           </AlertDialogAction>
-          <Button
-            onClick={onConfirmNotWearing}
-            variant="outline"
-            className="w-full border-destructive text-destructive hover:bg-destructive/10"
-          >
-            ❌ ยังไม่ได้ใส่ (จะเตือนอีกครั้ง)
-          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   );
-};
+}

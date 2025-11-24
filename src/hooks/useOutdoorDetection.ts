@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useHomeLocation } from './useHomeLocation';
 import { useUnifiedNotifications } from './useUnifiedNotifications';
+import { useWebcamMaskDetection } from './useWebcamMaskDetection';
+import { useVehicleDetection } from './useVehicleDetection';
+import { useMaskReminder } from './useMaskReminder';
 import { Capacitor } from '@capacitor/core';
 
 interface OutdoorDetectionConfig {
@@ -11,9 +14,21 @@ interface OutdoorDetectionConfig {
 export const useOutdoorDetection = ({ pm25, enabled }: OutdoorDetectionConfig) => {
   const { isAtHome, checkIfAtHome } = useHomeLocation();
   const { sendNotification } = useUnifiedNotifications();
-  const [isWearingMask, setIsWearingMask] = useState<boolean | null>(null);
   const [shouldPromptMask, setShouldPromptMask] = useState(false);
   const [lastNotificationTime, setLastNotificationTime] = useState<number>(0);
+  
+  // Webcam-based mask detection
+  const isInVehicleOrBuilding = useVehicleDetection(enabled);
+  const webcamEnabled = enabled && !isInVehicleOrBuilding;
+  const maskDetection = useWebcamMaskDetection(webcamEnabled);
+  const isWearingMask = maskDetection.faceDetected ? maskDetection.isWearingMask : null;
+  
+  // Continuous vibration reminder
+  useMaskReminder({
+    pm25,
+    isWearingMask: isWearingMask || false,
+    enabled: webcamEnabled && !isAtHome,
+  });
 
   // Check location every 2 minutes when enabled
   useEffect(() => {
@@ -31,13 +46,16 @@ export const useOutdoorDetection = ({ pm25, enabled }: OutdoorDetectionConfig) =
 
   // Monitor outdoor status and PM2.5
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || isInVehicleOrBuilding) {
+      setShouldPromptMask(false);
+      return;
+    }
 
     const shouldWearMask = pm25 > 60;
     const isOutdoors = !isAtHome;
 
-    // If outdoors and PM2.5 is high and not wearing mask
-    if (isOutdoors && shouldWearMask && isWearingMask === false) {
+    // If outdoors and PM2.5 is high and webcam detected no mask
+    if (isOutdoors && shouldWearMask && maskDetection.faceDetected && !maskDetection.isWearingMask) {
       const now = Date.now();
       const timeSinceLastNotif = now - lastNotificationTime;
       
@@ -51,7 +69,7 @@ export const useOutdoorDetection = ({ pm25, enabled }: OutdoorDetectionConfig) =
     } else {
       setShouldPromptMask(false);
     }
-  }, [isAtHome, pm25, isWearingMask, enabled]);
+  }, [isAtHome, pm25, maskDetection, enabled, isInVehicleOrBuilding]);
 
   const sendContinuousReminder = async () => {
     // Vibrate - works on both native and PWA
@@ -61,7 +79,7 @@ export const useOutdoorDetection = ({ pm25, enabled }: OutdoorDetectionConfig) =
         const { Haptics } = await import('@capacitor/haptics');
         await Haptics.vibrate({ duration: 1000 });
         setTimeout(async () => {
-          if (!isWearingMask) {
+          if (!maskDetection.isWearingMask) {
             await Haptics.vibrate({ duration: 1000 });
           }
         }, 1500);
@@ -75,32 +93,17 @@ export const useOutdoorDetection = ({ pm25, enabled }: OutdoorDetectionConfig) =
 
     // Send notification
     await sendNotification({
-      title: '⚠️ แจ้งเตือน: คุณอยู่นอกบ้าน!',
-      body: `ค่า PM2.5 สูงถึง ${pm25} µg/m³\nกรุณายืนยันว่าคุณใส่แมสหน้ากากแล้ว`,
+      title: '⚠️ แจ้งเตือน: ตรวจพบไม่ได้สวมหน้ากาก!',
+      body: `ค่า PM2.5 สูงถึง ${pm25} µg/m³\nกล้องตรวจพบว่าคุณไม่ได้ใส่หน้ากาก กรุณาสวมหน้ากากทันที!`,
       icon: '/pwa-192x192.png',
     });
-  };
-
-  const confirmWearingMask = () => {
-    setIsWearingMask(true);
-    setShouldPromptMask(false);
-  };
-
-  const confirmNotWearingMask = () => {
-    setIsWearingMask(false);
-  };
-
-  const resetMaskStatus = () => {
-    setIsWearingMask(null);
-    setShouldPromptMask(false);
   };
 
   return {
     isOutdoors: !isAtHome,
     isWearingMask,
     shouldPromptMask,
-    confirmWearingMask,
-    confirmNotWearingMask,
-    resetMaskStatus,
+    maskDetection,
+    isInVehicleOrBuilding,
   };
 };
