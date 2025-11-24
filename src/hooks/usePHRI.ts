@@ -12,6 +12,7 @@ interface PHRIData {
   hasSymptoms: boolean;
   symptoms: string[];
   location?: string;
+  wearingMask?: boolean;
 }
 
 interface PHRIResult {
@@ -73,6 +74,7 @@ export const usePHRI = () => {
         symptoms: data.symptoms,
         phri: result.phri,
         location: data.location,
+        wearing_mask: data.wearingMask || false,
       });
 
       if (error) throw error;
