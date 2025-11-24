@@ -237,10 +237,10 @@ export const useAirQuality = () => {
     
     initializeApp();
 
-    // Auto-refresh every 5 minutes (300,000 ms)
+    // Auto-refresh every 15 minutes (reduced to avoid rate limits)
     const intervalId = setInterval(() => {
       fetchAirQuality();
-    }, 300000);
+    }, 15 * 60 * 1000);
 
     return () => {
       clearInterval(intervalId);
