@@ -34,12 +34,13 @@ const Index = () => {
   const navigate = useNavigate();
   const [authUser, setAuthUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const { data, loading, refresh } = useAirQuality();
+  const { data, loading, refresh, initialize } = useAirQuality();
   const [userProfile, setUserProfile] = useState<UserHealthProfile | null>(null);
   const [showProfileForm, setShowProfileForm] = useState(false);
   const [currentPosition, setCurrentPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [monitoringEnabled, setMonitoringEnabled] = useState(true);
   const [currentPHRI, setCurrentPHRI] = useState<number | undefined>(undefined);
+  const [initialized, setInitialized] = useState(false);
   
   const { currentAlert, isMonitoring, clearAlert } = useLocationMonitor({
     userProfile,
@@ -68,6 +69,21 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  // Initialize air quality data after authentication
+  useEffect(() => {
+    if (authUser && !initialized) {
+      setInitialized(true);
+      initialize();
+      
+      // Set up auto-refresh every 15 minutes
+      const intervalId = setInterval(() => {
+        refresh();
+      }, 15 * 60 * 1000);
+
+      return () => clearInterval(intervalId);
+    }
+  }, [authUser, initialized, initialize, refresh]);
+
   useEffect(() => {
     const savedProfile = localStorage.getItem('healthProfile');
     if (savedProfile) {
@@ -81,7 +97,11 @@ const Index = () => {
     // Get current position for map
     const getCurrentPos = async () => {
       try {
-        const position = await Geolocation.getCurrentPosition();
+        const position = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: false,
+          timeout: 10000,
+          maximumAge: 120000
+        });
         setCurrentPosition({
           lat: position.coords.latitude,
           lng: position.coords.longitude
@@ -90,8 +110,11 @@ const Index = () => {
         console.error('Error getting position:', error);
       }
     };
-    getCurrentPos();
-  }, []);
+    
+    if (authUser) {
+      getCurrentPos();
+    }
+  }, [authUser]);
 
   const handleSaveProfile = (profile: UserHealthProfile) => {
     setUserProfile(profile);

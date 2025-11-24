@@ -148,15 +148,20 @@ export const useAirQuality = () => {
       const hasPermission = await requestLocationPermission();
       if (!hasPermission) {
         setLoading(false);
+        toast({
+          title: 'ต้องการสิทธิ์เข้าถึงตำแหน่ง',
+          description: 'กรุณาอนุญาตให้แอปเข้าถึงตำแหน่งเพื่อแสดงข้อมูลคุณภาพอากาศ',
+          variant: 'destructive',
+        });
         return;
       }
 
       // Get current position with proper mobile settings
       console.log('Getting current position...');
       const position = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: true,
-        timeout: 20000, // Increased timeout for mobile (20 seconds)
-        maximumAge: 60000 // Allow cached position up to 60 seconds old
+        enableHighAccuracy: false, // Changed to false for faster response
+        timeout: 15000, // 15 seconds timeout
+        maximumAge: 120000 // Allow cached position up to 2 minutes old
       });
 
       console.log('Location obtained:', {
@@ -174,11 +179,15 @@ export const useAirQuality = () => {
 
       if (error) {
         console.error('Edge function error:', error);
-        throw error;
+        throw new Error('ไม่สามารถติดต่อเซิร์ฟเวอร์ได้');
       }
 
-      if (!functionData || !functionData.pm25) {
-        throw new Error('Invalid data received from server');
+      if (!functionData || functionData.error) {
+        throw new Error(functionData?.error || 'ข้อมูลจากเซิร์ฟเวอร์ไม่ถูกต้อง');
+      }
+
+      if (!functionData.pm25 && functionData.pm25 !== 0) {
+        throw new Error('ไม่พบข้อมูล PM2.5');
       }
 
       setData(functionData);
@@ -207,17 +216,21 @@ export const useAirQuality = () => {
       console.error('Error fetching air quality:', error);
       
       let errorMessage = 'ไม่สามารถดึงข้อมูลคุณภาพอากาศได้';
+      let errorTitle = 'เกิดข้อผิดพลาด';
       
-      if (error.message?.includes('location')) {
-        errorMessage = 'ไม่สามารถระบุตำแหน่งของคุณได้ กรุณาตรวจสอบการตั้งค่า GPS';
-      } else if (error.message?.includes('timeout')) {
-        errorMessage = 'หมดเวลาในการรับตำแหน่ง กรุณาลองใหม่อีกครั้ง';
-      } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
-        errorMessage = 'ไม่สามารถเชื่อมต่ออินเทอร์เน็ตได้ กรุณาตรวจสอบการเชื่อมต่อ';
+      if (error.message?.includes('User denied') || error.message?.includes('location')) {
+        errorTitle = 'ต้องการสิทธิ์เข้าถึงตำแหน่ง';
+        errorMessage = 'กรุณาอนุญาตให้แอปเข้าถึงตำแหน่งของคุณ';
+      } else if (error.message?.includes('timeout') || error.message?.includes('timed out')) {
+        errorMessage = 'หมดเวลาในการรับตำแหน่ง กรุณาตรวจสอบ GPS และลองใหม่';
+      } else if (error.message?.includes('network') || error.message?.includes('Failed to fetch')) {
+        errorMessage = 'ไม่สามารถเชื่อมต่ออินเทอร์เน็ต กรุณาตรวจสอบการเชื่อมต่อ';
+      } else if (error.message) {
+        errorMessage = error.message;
       }
       
       toast({
-        title: 'เกิดข้อผิดพลาด',
+        title: errorTitle,
         description: errorMessage,
         variant: 'destructive',
       });
@@ -226,30 +239,19 @@ export const useAirQuality = () => {
     }
   };
 
-  // Request permissions when app starts and set up auto-refresh
-  useEffect(() => {
-    const initializeApp = async () => {
-      // Request notification permission first
-      await requestNotificationPermission();
-      // Then fetch air quality (which will request location permission)
-      await fetchAirQuality();
-    };
-    
-    initializeApp();
-
-    // Auto-refresh every 15 minutes (reduced to avoid rate limits)
-    const intervalId = setInterval(() => {
-      fetchAirQuality();
-    }, 15 * 60 * 1000);
-
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, []);
+  // Only initialize when explicitly called from the component
+  // Don't auto-fetch on mount to avoid errors on auth page
+  const initializeApp = async () => {
+    // Request notification permission first
+    await requestNotificationPermission();
+    // Then fetch air quality (which will request location permission)
+    await fetchAirQuality();
+  };
 
   return {
     data,
     loading,
-    refresh: fetchAirQuality
+    refresh: fetchAirQuality,
+    initialize: initializeApp
   };
 };
