@@ -20,6 +20,7 @@ import heroImage from "@/assets/hero-clean-air.jpg";
 import { useAirQuality } from "@/hooks/useAirQuality";
 import { useLocationMonitor } from "@/hooks/useLocationMonitor";
 import { Geolocation } from '@capacitor/geolocation';
+import { AirQualityCardSkeleton, TabContentSkeleton, MapSkeleton } from "@/components/LoadingSkeleton";
 
 // Lazy load heavy components
 const NearbyHospitals = lazy(() => import("@/components/NearbyHospitals").then(m => ({ default: m.NearbyHospitals })));
@@ -257,16 +258,20 @@ const Index = () => {
         </div>
 
         {/* Air Quality Card */}
-        <AirQualityCard 
-          pm25={pm25Value} 
-          pm10={data?.pm10}
-          no2={data?.no2}
-          o3={data?.o3}
-          aqi={data?.aqi}
-          location={location}
-          timestamp={currentTime}
-          source={data?.source}
-        />
+        {loading ? (
+          <AirQualityCardSkeleton />
+        ) : (
+          <AirQualityCard 
+            pm25={pm25Value} 
+            pm10={data?.pm10}
+            no2={data?.no2}
+            o3={data?.o3}
+            aqi={data?.aqi}
+            location={location}
+            timestamp={currentTime}
+            source={data?.source}
+          />
+        )}
 
         {/* PHRI Display */}
         <PHRIDisplay 
@@ -314,7 +319,7 @@ const Index = () => {
             </TabsTrigger>
           </TabsList>
           <TabsContent value="chatbot" className="mt-4">
-            <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin mx-auto" />}>
+            <Suspense fallback={<TabContentSkeleton />}>
               <HealthChatbot 
                 pm25={pm25Value}
                 temperature={data?.temperature || 0}
@@ -323,7 +328,7 @@ const Index = () => {
             </Suspense>
           </TabsContent>
           <TabsContent value="phri" className="mt-4 space-y-4">
-            <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin mx-auto" />}>
+            <Suspense fallback={<TabContentSkeleton />}>
               <PHRICalculator 
                 currentAQI={data?.aqi || 0}
                 currentPM25={pm25Value}
@@ -334,7 +339,7 @@ const Index = () => {
             </Suspense>
           </TabsContent>
           <TabsContent value="ai-advice" className="mt-4">
-            <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin mx-auto" />}>
+            <Suspense fallback={<TabContentSkeleton />}>
               <AIHealthAdvice
                 pm25={pm25Value}
                 temperature={data?.temperature || 0}
@@ -351,22 +356,19 @@ const Index = () => {
             />
           </TabsContent>
           <TabsContent value="hospitals" className="mt-4">
-            <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin mx-auto" />}>
+            <Suspense fallback={<TabContentSkeleton />}>
               <NearbyHospitals />
             </Suspense>
           </TabsContent>
           <TabsContent value="navigation" className="mt-4">
-            <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin mx-auto" />}>
+            <Suspense fallback={<MapSkeleton />}>
               {currentPosition ? (
                 <RouteMap 
                   currentLat={currentPosition.lat}
                   currentLng={currentPosition.lng}
                 />
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                  กำลังโหลดตำแหน่ง...
-                </div>
+                <MapSkeleton />
               )}
             </Suspense>
           </TabsContent>
