@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
 
-interface NotificationOptions {
+export interface NotificationOptions {
   title: string;
   body: string;
   icon?: string;
@@ -12,24 +12,20 @@ interface NotificationOptions {
 
 export const useUnifiedNotifications = () => {
   const [isSupported, setIsSupported] = useState(false);
-  const [permission, setPermission] = useState<'granted' | 'denied' | 'default'>('default');
+  const [permission, setPermission] = useState<NotificationPermission>('default');
 
   useEffect(() => {
     checkSupport();
   }, []);
 
   const checkSupport = async () => {
+    // Check if running on native platform or PWA with notification support
     if (Capacitor.isNativePlatform()) {
-      // Native app (Android/iOS)
       setIsSupported(true);
-      try {
-        const result = await LocalNotifications.requestPermissions();
-        setPermission(result.display === 'granted' ? 'granted' : 'denied');
-      } catch (error) {
-        console.error('Error requesting native permissions:', error);
-      }
+      const status = await LocalNotifications.checkPermissions();
+      setPermission(status.display === 'granted' ? 'granted' : 'default');
     } else if ('Notification' in window && 'serviceWorker' in navigator) {
-      // PWA
+      // PWA support
       setIsSupported(true);
       setPermission(Notification.permission);
     }
@@ -37,16 +33,13 @@ export const useUnifiedNotifications = () => {
 
   const requestPermission = async (): Promise<boolean> => {
     if (Capacitor.isNativePlatform()) {
-      try {
-        const result = await LocalNotifications.requestPermissions();
-        const granted = result.display === 'granted';
-        setPermission(granted ? 'granted' : 'denied');
-        return granted;
-      } catch (error) {
-        console.error('Error requesting native permissions:', error);
-        return false;
-      }
+      // Native app
+      const status = await LocalNotifications.requestPermissions();
+      const granted = status.display === 'granted';
+      setPermission(granted ? 'granted' : 'denied');
+      return granted;
     } else if ('Notification' in window) {
+      // PWA
       const result = await Notification.requestPermission();
       setPermission(result);
       return result === 'granted';
@@ -54,65 +47,66 @@ export const useUnifiedNotifications = () => {
     return false;
   };
 
-  const sendNotification = async (options: NotificationOptions): Promise<boolean> => {
+  const sendNotification = async (options: NotificationOptions): Promise<void> => {
+    // Request permission if not granted
     if (permission !== 'granted') {
       const granted = await requestPermission();
-      if (!granted) return false;
+      if (!granted) {
+        console.log('Notification permission not granted');
+        return;
+      }
     }
 
-    try {
-      if (Capacitor.isNativePlatform()) {
-        // Native notification
+    if (Capacitor.isNativePlatform()) {
+      // Native platform - use LocalNotifications
+      try {
         await LocalNotifications.schedule({
-          notifications: [
-            {
-              title: options.title,
-              body: options.body,
-              id: Date.now(),
-              schedule: { at: new Date(Date.now() + 100) },
-              sound: 'default',
-              attachments: undefined,
-              actionTypeId: '',
-              extra: null
-            }
-          ]
+          notifications: [{
+            title: options.title,
+            body: options.body,
+            id: Date.now(),
+            schedule: { at: new Date(Date.now() + 1000) },
+            sound: 'default',
+            actionTypeId: '',
+            extra: null,
+          }]
         });
-        return true;
-      } else if ('Notification' in window && 'serviceWorker' in navigator) {
-        // PWA notification via service worker
+      } catch (error) {
+        console.error('Error sending native notification:', error);
+      }
+    } else if ('serviceWorker' in navigator && 'Notification' in window) {
+      // PWA - use Service Worker Notification API
+      try {
+        // Vibrate first if supported
+        if ('vibrate' in navigator) {
+          navigator.vibrate([200, 100, 200]);
+        }
+        
         const registration = await navigator.serviceWorker.ready;
         await registration.showNotification(options.title, {
           body: options.body,
           icon: options.icon || '/pwa-192x192.png',
           badge: options.badge || '/pwa-192x192.png',
-          tag: options.tag || 'pm25-alert',
+          tag: options.tag || 'pm25-notification',
           requireInteraction: true,
         });
-        
-        // Vibrate if supported
-        if ('vibrate' in navigator) {
-          navigator.vibrate([200, 100, 200]);
+      } catch (error) {
+        console.error('Error sending PWA notification:', error);
+        // Fallback to basic notification
+        if (Notification.permission === 'granted') {
+          new Notification(options.title, {
+            body: options.body,
+            icon: options.icon || '/pwa-192x192.png',
+          });
         }
-        return true;
-      } else if ('Notification' in window) {
-        // Fallback to basic web notification
-        new Notification(options.title, {
-          body: options.body,
-          icon: options.icon || '/pwa-192x192.png',
-        });
-        return true;
       }
-    } catch (error) {
-      console.error('Error sending notification:', error);
-      return false;
     }
-    return false;
   };
 
   return {
     isSupported,
     permission,
     requestPermission,
-    sendNotification
+    sendNotification,
   };
 };

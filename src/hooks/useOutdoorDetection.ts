@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useHomeLocation } from './useHomeLocation';
 import { useUnifiedNotifications } from './useUnifiedNotifications';
-import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { Capacitor } from '@capacitor/core';
 
 interface OutdoorDetectionConfig {
@@ -55,18 +54,23 @@ export const useOutdoorDetection = ({ pm25, enabled }: OutdoorDetectionConfig) =
   }, [isAtHome, pm25, isWearingMask, enabled]);
 
   const sendContinuousReminder = async () => {
-    // Vibrate continuously
-    if (Capacitor.isNativePlatform()) {
-      try {
+    // Vibrate - works on both native and PWA
+    try {
+      if (Capacitor.isNativePlatform()) {
+        // Native vibration via Haptics plugin
+        const { Haptics } = await import('@capacitor/haptics');
         await Haptics.vibrate({ duration: 1000 });
         setTimeout(async () => {
           if (!isWearingMask) {
             await Haptics.vibrate({ duration: 1000 });
           }
         }, 1500);
-      } catch (error) {
-        console.error('Haptics error:', error);
+      } else if ('vibrate' in navigator) {
+        // PWA vibration
+        navigator.vibrate([1000, 500, 1000]);
       }
+    } catch (error) {
+      console.error('Vibration error:', error);
     }
 
     // Send notification

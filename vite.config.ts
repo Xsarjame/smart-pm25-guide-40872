@@ -37,10 +37,10 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'robots.txt', 'pwa-192x192.png', 'pwa-512x512.png'],
       manifest: {
-        name: 'Smart PM2.5 Health',
+        name: 'Smart PM2.5 Health - ระบบเฝ้าระวังคุณภาพอากาศ',
         short_name: 'PM2.5 Health',
         description: 'ติดตามค่า PM2.5 แบบเรียลไทม์พร้อมคำแนะนำสุขภาพเฉพาะบุคคล',
-        theme_color: '#ffffff',
+        theme_color: '#0ea5e9',
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
@@ -50,27 +50,38 @@ export default defineConfig(({ mode }) => ({
           {
             src: '/pwa-192x192.png',
             sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: '/pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any'
           },
           {
             src: '/pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'any'
+          },
+          {
+            src: '/pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
+          }
+        ],
+        screenshots: [
+          {
+            src: '/pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            form_factor: 'narrow'
           }
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         globIgnores: ['**/node_modules/**/*'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         skipWaiting: true,
         clientsClaim: true,
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -81,6 +92,21 @@ export default defineConfig(({ mode }) => ({
                 maxEntries: 10,
                 maxAgeSeconds: 60 * 60 * 24 * 365
               },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/functions\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'supabase-functions-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 5 * 60
+              },
+              networkTimeoutSeconds: 10,
               cacheableResponse: {
                 statuses: [0, 200]
               }
@@ -102,7 +128,21 @@ export default defineConfig(({ mode }) => ({
             }
           },
           {
-            urlPattern: /\.(?:png|jpg|jpeg|svg|gif)$/,
+            urlPattern: /^https:\/\/api\.mapbox\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'mapbox-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 * 7
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
+          {
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
             handler: 'CacheFirst',
             options: {
               cacheName: 'image-cache',
@@ -113,7 +153,7 @@ export default defineConfig(({ mode }) => ({
             }
           },
           {
-            urlPattern: /\.(?:js|css)$/,
+            urlPattern: /\.(?:js|css|woff2)$/,
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'static-resources',
@@ -124,6 +164,10 @@ export default defineConfig(({ mode }) => ({
             }
           }
         ]
+      },
+      devOptions: {
+        enabled: mode === 'development',
+        type: 'module'
       }
     })
   ].filter(Boolean),
