@@ -34,6 +34,7 @@ export const PHRICalculator = ({
   const [age, setAge] = useState('');
   const [gender, setGender] = useState('');
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
+  const [wearingMask, setWearingMask] = useState(false);
   const { saveHealthLog, loading } = usePHRI();
 
   const handleSymptomToggle = (symptomId: string) => {
@@ -69,6 +70,15 @@ export const PHRICalculator = ({
       return;
     }
 
+    // Check mask warning for high PM2.5
+    if (currentPM25 > 60 && !wearingMask) {
+      toast({
+        title: '⚠️ คำเตือน: ฝุ่น PM2.5 สูง',
+        description: 'ค่าฝุ่น PM2.5 เกิน 60 คุณควรใส่หน้ากาก N95 เมื่ออยู่กลางแจ้ง',
+        variant: 'destructive',
+      });
+    }
+
     try {
       const result = await saveHealthLog({
         aqi: currentAQI,
@@ -79,6 +89,7 @@ export const PHRICalculator = ({
         hasSymptoms: selectedSymptoms.length > 0,
         symptoms: selectedSymptoms,
         location: currentLocation,
+        wearingMask,
       });
 
       if (result && onCalculated) {
@@ -90,6 +101,7 @@ export const PHRICalculator = ({
       setAge('');
       setGender('');
       setSelectedSymptoms([]);
+      setWearingMask(false);
     } catch (error) {
       console.error('Error submitting PHRI data:', error);
     }
@@ -174,6 +186,34 @@ export const PHRICalculator = ({
               ))}
             </div>
           </div>
+
+          {currentPM25 > 60 && (
+            <div className="p-4 rounded-lg bg-warning/10 border border-warning">
+              <div className="flex items-start gap-3">
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-warning mb-1">
+                    ⚠️ ค่าฝุ่น PM2.5 สูง ({currentPM25.toFixed(1)} µg/m³)
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    แนะนำให้สวมหน้ากาก N95 เมื่ออยู่กลางแจ้ง
+                  </p>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="wearing-mask"
+                      checked={wearingMask}
+                      onCheckedChange={(checked) => setWearingMask(checked as boolean)}
+                    />
+                    <label
+                      htmlFor="wearing-mask"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      ฉันได้สวมหน้ากากเมื่ออยู่กลางแจ้ง
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? 'กำลังบันทึก...' : 'บันทึกและคำนวณ PHRI'}

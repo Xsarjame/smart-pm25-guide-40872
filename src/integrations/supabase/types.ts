@@ -29,6 +29,7 @@ export type Database = {
           pm25: number
           symptoms: string[] | null
           user_id: string
+          wearing_mask: boolean | null
         }
         Insert: {
           age: number
@@ -44,6 +45,7 @@ export type Database = {
           pm25: number
           symptoms?: string[] | null
           user_id: string
+          wearing_mask?: boolean | null
         }
         Update: {
           age?: number
@@ -59,6 +61,7 @@ export type Database = {
           pm25?: number
           symptoms?: string[] | null
           user_id?: string
+          wearing_mask?: boolean | null
         }
         Relationships: []
       }
