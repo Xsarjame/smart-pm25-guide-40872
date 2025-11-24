@@ -5,6 +5,7 @@ import { useWebcamMaskDetection } from './useWebcamMaskDetection';
 import { useVehicleDetection } from './useVehicleDetection';
 import { useMaskReminder } from './useMaskReminder';
 import { useBackgroundMode } from './useBackgroundMode';
+import { useBackgroundSync } from './useBackgroundSync';
 import { Capacitor } from '@capacitor/core';
 
 interface OutdoorDetectionConfig {
@@ -26,9 +27,12 @@ export const useOutdoorDetection = ({ pm25, enabled }: OutdoorDetectionConfig) =
   
   // Enable background mode with wake lock for persistent operation
   useBackgroundMode({
-    enabled: webcamEnabled && !isAtHome,
+    enabled: enabled && !isAtHome,
     wakeLock: true,
   });
+  
+  // Enable background sync for PWA and Native
+  useBackgroundSync(enabled);
   
   // Continuous vibration reminder
   useMaskReminder({
