@@ -5,6 +5,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Simple in-memory cache with 15-minute TTL
+const cache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -12,8 +16,19 @@ serve(async (req) => {
 
   try {
     const { latitude, longitude } = await req.json();
+    const cacheKey = `${latitude.toFixed(2)},${longitude.toFixed(2)}`;
 
     console.log('Fetching air quality data for:', { latitude, longitude });
+
+    // Check cache first
+    const cached = cache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      console.log('Returning cached data for:', cacheKey);
+      return new Response(
+        JSON.stringify(cached.data),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'HIT' } }
+      );
+    }
 
     const IQAIR_API_KEY = Deno.env.get('IQAIR_API_KEY');
 
@@ -30,6 +45,16 @@ serve(async (req) => {
     if (!airQualityResponse.ok) {
       const errorText = await airQualityResponse.text();
       console.error('IQAir API error:', airQualityResponse.status, errorText);
+      
+      // If rate limited and we have cached data, return it even if expired
+      if (airQualityResponse.status === 429 && cached) {
+        console.log('Rate limited, returning stale cache for:', cacheKey);
+        return new Response(
+          JSON.stringify({ ...cached.data, cached: true, stale: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'STALE' } }
+        );
+      }
+      
       throw new Error(`IQAir API error: ${airQualityResponse.status}`);
     }
 
@@ -87,22 +112,29 @@ serve(async (req) => {
       location, temperature, humidity 
     });
     
+    const responseData = {
+      pm25,
+      pm10,
+      no2,
+      o3,
+      so2,
+      co,
+      aqi,
+      location,
+      timestamp,
+      temperature,
+      humidity,
+      source: 'IQAir',
+      cached: false
+    };
+
+    // Store in cache
+    cache.set(cacheKey, { data: responseData, timestamp: Date.now() });
+    console.log('Data cached for:', cacheKey);
+    
     return new Response(
-      JSON.stringify({
-        pm25,
-        pm10,
-        no2,
-        o3,
-        so2,
-        co,
-        aqi,
-        location,
-        timestamp,
-        temperature,
-        humidity,
-        source: 'IQAir'
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify(responseData),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'MISS' } }
     );
   } catch (error) {
     console.error('Error in get-air-quality function:', error);
