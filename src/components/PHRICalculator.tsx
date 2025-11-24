@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { usePHRI } from '@/hooks/usePHRI';
+import { useMaskReminder } from '@/hooks/useMaskReminder';
 import { toast } from '@/hooks/use-toast';
 import { Clock, User, Activity } from 'lucide-react';
 
@@ -36,6 +37,13 @@ export const PHRICalculator = ({
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [wearingMask, setWearingMask] = useState(false);
   const { saveHealthLog, loading } = usePHRI();
+
+  // Continuous vibration reminder when PM2.5 > 60 and not wearing mask
+  useMaskReminder({
+    pm25: currentPM25,
+    isWearingMask: wearingMask,
+    enabled: currentPM25 > 60
+  });
 
   const handleSymptomToggle = (symptomId: string) => {
     setSelectedSymptoms(prev =>
