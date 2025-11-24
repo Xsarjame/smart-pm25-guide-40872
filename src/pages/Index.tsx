@@ -16,12 +16,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { MapPin, RefreshCw, User, Hospital, Loader2, Navigation, MessageSquare, Shield, Activity, LogOut } from "lucide-react";
+import { MapPin, RefreshCw, User, Hospital, Loader2, Navigation, MessageSquare, Shield, Activity, LogOut, TrendingUp } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import heroImage from "@/assets/hero-clean-air.jpg";
 import { useAirQuality } from "@/hooks/useAirQuality";
 import { useLocationMonitor } from "@/hooks/useLocationMonitor";
 import { useOutdoorDetection } from "@/hooks/useOutdoorDetection";
+import { usePM25WorseningAlert } from "@/hooks/usePM25WorseningAlert";
 import { Geolocation } from '@capacitor/geolocation';
 import { AirQualityCardSkeleton, TabContentSkeleton, MapSkeleton } from "@/components/LoadingSkeleton";
 
@@ -59,6 +60,13 @@ const Index = () => {
   } = useOutdoorDetection({
     pm25: data?.pm25 || 0,
     enabled: monitoringEnabled,
+  });
+
+  // PM2.5 Worsening Alert - ระบบแจ้งเตือนเมื่อค่าฝุ่นแย่ลง
+  const { isWorsening, previousPM25, increase } = usePM25WorseningAlert({
+    pm25: data?.pm25 || 0,
+    enabled: monitoringEnabled,
+    threshold: 10, // แจ้งเตือนเมื่อค่าฝุ่นเพิ่มขึ้น 10+ µg/m³
   });
 
   // Check authentication
@@ -334,6 +342,23 @@ const Index = () => {
                     🎥 กำลังค้นหาใบหน้า...
                   </p>
                 )}
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* PM2.5 Worsening Indicator */}
+        {isWorsening && (
+          <Card className="p-4 bg-destructive/10 border-destructive/30 animate-pulse">
+            <div className="flex items-center gap-3">
+              <TrendingUp className="w-5 h-5 text-destructive" />
+              <div className="flex-1">
+                <p className="font-semibold text-destructive">
+                  📈 ค่าฝุ่น PM2.5 แย่ลง!
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  เพิ่มขึ้น {increase.toFixed(1)} µg/m³ จากค่าก่อนหน้า {previousPM25?.toFixed(1) || 0} µg/m³
+                </p>
               </div>
             </div>
           </Card>
