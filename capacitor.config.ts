@@ -25,6 +25,14 @@ const config: CapacitorConfig = {
     LocalNotifications: {
       smallIcon: 'ic_stat_icon_config_sample',
       iconColor: '#488AFF'
+    },
+    BackgroundRunner: {
+      label: 'com.smartpm25.background',
+      src: 'background.js',
+      event: 'backgroundTask',
+      repeat: true,
+      interval: 15, // ทำงานทุก 15 นาที
+      autoStart: true
     }
   }
 };
