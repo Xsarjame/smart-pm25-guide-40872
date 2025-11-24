@@ -9,6 +9,8 @@ import { AlertNotification } from "@/components/AlertNotification";
 import { LocationMonitorAlert } from "@/components/LocationMonitorAlert";
 import { PHRIDisplay } from "@/components/PHRIDisplay";
 import { PHRIComparison } from "@/components/PHRIComparison";
+import { HomeLocationSetup } from "@/components/HomeLocationSetup";
+import { MaskConfirmationDialog } from "@/components/MaskConfirmationDialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
@@ -19,6 +21,7 @@ import { toast } from "@/hooks/use-toast";
 import heroImage from "@/assets/hero-clean-air.jpg";
 import { useAirQuality } from "@/hooks/useAirQuality";
 import { useLocationMonitor } from "@/hooks/useLocationMonitor";
+import { useOutdoorDetection } from "@/hooks/useOutdoorDetection";
 import { Geolocation } from '@capacitor/geolocation';
 import { AirQualityCardSkeleton, TabContentSkeleton, MapSkeleton } from "@/components/LoadingSkeleton";
 
@@ -45,6 +48,17 @@ const Index = () => {
   const { currentAlert, isMonitoring, clearAlert } = useLocationMonitor({
     userProfile,
     enabled: monitoringEnabled
+  });
+
+  const {
+    isOutdoors,
+    isWearingMask,
+    shouldPromptMask,
+    confirmWearingMask,
+    confirmNotWearingMask,
+  } = useOutdoorDetection({
+    pm25: data?.pm25 || 0,
+    enabled: monitoringEnabled,
   });
 
   // Check authentication
@@ -254,6 +268,14 @@ const Index = () => {
           </Card>
         )}
 
+        {/* Mask Confirmation Dialog */}
+        <MaskConfirmationDialog
+          open={shouldPromptMask}
+          pm25={pm25Value}
+          onConfirmWearing={confirmWearingMask}
+          onConfirmNotWearing={confirmNotWearingMask}
+        />
+
         {/* Action Buttons */}
         <div className="flex gap-3 flex-wrap">
           <Button
@@ -279,6 +301,30 @@ const Index = () => {
             </Button>
           )}
         </div>
+
+        {/* Outdoor Status Indicator */}
+        {isOutdoors && (
+          <Card className="p-4 bg-orange-500/10 border-orange-500/30">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <MapPin className="w-5 h-5 text-orange-500" />
+                <div>
+                  <p className="font-semibold text-orange-700 dark:text-orange-400">
+                    🚶 คุณอยู่นอกบ้าน
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {isWearingMask === true && '✅ ใส่หน้ากากแล้ว'}
+                    {isWearingMask === false && '⚠️ ยังไม่ได้ใส่หน้ากาก'}
+                    {isWearingMask === null && 'กำลังตรวจสอบ...'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Home Location Setup */}
+        <HomeLocationSetup />
 
         {/* Air Quality Card */}
         {loading ? (
