@@ -7,6 +7,7 @@ import { HealthProfileDisplay } from "@/components/HealthProfileDisplay";
 import { HealthRecommendations } from "@/components/HealthRecommendations";
 import { AlertNotification } from "@/components/AlertNotification";
 import { LocationMonitorAlert } from "@/components/LocationMonitorAlert";
+import { BackgroundSyncStatus } from "@/components/BackgroundSyncStatus";
 import { PHRIDisplay } from "@/components/PHRIDisplay";
 import { PHRIComparison } from "@/components/PHRIComparison";
 import { HomeLocationSetup } from "@/components/HomeLocationSetup";
@@ -366,6 +367,9 @@ const Index = () => {
 
         {/* Home Location Setup */}
         <HomeLocationSetup />
+
+        {/* Background Sync Status */}
+        <BackgroundSyncStatus />
 
         {/* Air Quality Card */}
         {loading ? (
