@@ -17,7 +17,6 @@ export const useWebcamMaskDetection = (enabled: boolean) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const faceDetectorRef = useRef<FaceDetector | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
 
   // Initialize MediaPipe Face Detector
   useEffect(() => {
@@ -59,10 +58,6 @@ export const useWebcamMaskDetection = (enabled: boolean) => {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
       }
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
       return;
     }
 
@@ -80,7 +75,7 @@ export const useWebcamMaskDetection = (enabled: boolean) => {
         video.play();
         videoRef.current = video;
 
-        // Start detection loop
+        // Battery-optimized detection loop - sample every 15 seconds
         const detectMask = () => {
           if (!videoRef.current || !faceDetectorRef.current || !enabled) return;
 
@@ -95,7 +90,6 @@ export const useWebcamMaskDetection = (enabled: boolean) => {
               
               // Analyze face coverage to detect mask
               // If lower face (mouth/nose area) is occluded, likely wearing mask
-              const boundingBox = face.boundingBox;
               const keypoints = face.keypoints || [];
               
               // Simple heuristic: if we detect face but keypoints are limited,
@@ -116,12 +110,21 @@ export const useWebcamMaskDetection = (enabled: boolean) => {
               });
             }
           }
-
-          animationFrameRef.current = requestAnimationFrame(detectMask);
         };
 
+        let detectionInterval: NodeJS.Timeout;
+        
         video.onloadeddata = () => {
+          // Initial detection
           detectMask();
+          // Continue detection every 15 seconds for battery optimization
+          detectionInterval = setInterval(detectMask, 15000);
+        };
+
+        return () => {
+          if (detectionInterval) {
+            clearInterval(detectionInterval);
+          }
         };
 
       } catch (error) {
@@ -134,9 +137,6 @@ export const useWebcamMaskDetection = (enabled: boolean) => {
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
-      }
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
       }
     };
   }, [enabled, isInitialized]);

@@ -4,6 +4,7 @@ import { useUnifiedNotifications } from './useUnifiedNotifications';
 import { useWebcamMaskDetection } from './useWebcamMaskDetection';
 import { useVehicleDetection } from './useVehicleDetection';
 import { useMaskReminder } from './useMaskReminder';
+import { useBackgroundMode } from './useBackgroundMode';
 import { Capacitor } from '@capacitor/core';
 
 interface OutdoorDetectionConfig {
@@ -22,6 +23,12 @@ export const useOutdoorDetection = ({ pm25, enabled }: OutdoorDetectionConfig) =
   const webcamEnabled = enabled && !isInVehicleOrBuilding;
   const maskDetection = useWebcamMaskDetection(webcamEnabled);
   const isWearingMask = maskDetection.faceDetected ? maskDetection.isWearingMask : null;
+  
+  // Enable background mode with wake lock for persistent operation
+  useBackgroundMode({
+    enabled: webcamEnabled && !isAtHome,
+    wakeLock: true,
+  });
   
   // Continuous vibration reminder
   useMaskReminder({
@@ -72,20 +79,18 @@ export const useOutdoorDetection = ({ pm25, enabled }: OutdoorDetectionConfig) =
   }, [isAtHome, pm25, maskDetection, enabled, isInVehicleOrBuilding]);
 
   const sendContinuousReminder = async () => {
-    // Vibrate - works on both native and PWA
+    // Vibrate with 2-pulse pattern for no mask detection
     try {
       if (Capacitor.isNativePlatform()) {
-        // Native vibration via Haptics plugin
+        // Native vibration via Haptics plugin - simulate 2 pulses
         const { Haptics } = await import('@capacitor/haptics');
-        await Haptics.vibrate({ duration: 1000 });
+        await Haptics.vibrate({ duration: 200 });
         setTimeout(async () => {
-          if (!maskDetection.isWearingMask) {
-            await Haptics.vibrate({ duration: 1000 });
-          }
-        }, 1500);
+          await Haptics.vibrate({ duration: 200 });
+        }, 300);
       } else if ('vibrate' in navigator) {
-        // PWA vibration
-        navigator.vibrate([1000, 500, 1000]);
+        // PWA vibration - 2 pulses pattern [200ms on, 100ms off, 200ms on]
+        navigator.vibrate([200, 100, 200]);
       }
     } catch (error) {
       console.error('Vibration error:', error);
