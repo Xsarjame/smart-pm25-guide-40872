@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AirQualityCard } from "@/components/AirQualityCard";
@@ -6,15 +6,9 @@ import { HealthProfileForm, UserHealthProfile } from "@/components/HealthProfile
 import { HealthProfileDisplay } from "@/components/HealthProfileDisplay";
 import { HealthRecommendations } from "@/components/HealthRecommendations";
 import { AlertNotification } from "@/components/AlertNotification";
-import { NearbyHospitals } from "@/components/NearbyHospitals";
-import { AIHealthAdvice } from "@/components/AIHealthAdvice";
-import { HealthChatbot } from "@/components/HealthChatbot";
-import { RouteMap } from "@/components/RouteMap";
 import { LocationMonitorAlert } from "@/components/LocationMonitorAlert";
 import { PHRIDisplay } from "@/components/PHRIDisplay";
-import { PHRICalculator } from "@/components/PHRICalculator";
 import { PHRIComparison } from "@/components/PHRIComparison";
-import { HealthLogsHistory } from "@/components/HealthLogsHistory";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
@@ -26,6 +20,14 @@ import heroImage from "@/assets/hero-clean-air.jpg";
 import { useAirQuality } from "@/hooks/useAirQuality";
 import { useLocationMonitor } from "@/hooks/useLocationMonitor";
 import { Geolocation } from '@capacitor/geolocation';
+
+// Lazy load heavy components
+const NearbyHospitals = lazy(() => import("@/components/NearbyHospitals").then(m => ({ default: m.NearbyHospitals })));
+const AIHealthAdvice = lazy(() => import("@/components/AIHealthAdvice").then(m => ({ default: m.AIHealthAdvice })));
+const HealthChatbot = lazy(() => import("@/components/HealthChatbot").then(m => ({ default: m.HealthChatbot })));
+const RouteMap = lazy(() => import("@/components/RouteMap").then(m => ({ default: m.RouteMap })));
+const PHRICalculator = lazy(() => import("@/components/PHRICalculator").then(m => ({ default: m.PHRICalculator })));
+const HealthLogsHistory = lazy(() => import("@/components/HealthLogsHistory").then(m => ({ default: m.HealthLogsHistory })));
 
 const Index = () => {
   const navigate = useNavigate();
@@ -160,12 +162,14 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Hero Section */}
+      {/* Hero Section - Optimized image loading */}
       <div className="relative h-48 md:h-64 overflow-hidden">
         <img 
           src={heroImage} 
           alt="Clean Air" 
           className="w-full h-full object-cover"
+          loading="eager"
+          fetchPriority="high"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/80" />
         <div className="absolute inset-0 flex items-center justify-center">
@@ -310,28 +314,34 @@ const Index = () => {
             </TabsTrigger>
           </TabsList>
           <TabsContent value="chatbot" className="mt-4">
-            <HealthChatbot 
-              pm25={pm25Value}
-              temperature={data?.temperature || 0}
-              humidity={data?.humidity || 0}
-            />
+            <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin mx-auto" />}>
+              <HealthChatbot 
+                pm25={pm25Value}
+                temperature={data?.temperature || 0}
+                humidity={data?.humidity || 0}
+              />
+            </Suspense>
           </TabsContent>
           <TabsContent value="phri" className="mt-4 space-y-4">
-            <PHRICalculator 
-              currentAQI={data?.aqi || 0}
-              currentPM25={pm25Value}
-              currentLocation={location}
-              onCalculated={(phri) => setCurrentPHRI(phri)}
-            />
-            <HealthLogsHistory />
+            <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin mx-auto" />}>
+              <PHRICalculator 
+                currentAQI={data?.aqi || 0}
+                currentPM25={pm25Value}
+                currentLocation={location}
+                onCalculated={(phri) => setCurrentPHRI(phri)}
+              />
+              <HealthLogsHistory />
+            </Suspense>
           </TabsContent>
           <TabsContent value="ai-advice" className="mt-4">
-            <AIHealthAdvice
-              pm25={pm25Value}
-              temperature={data?.temperature || 0}
-              humidity={data?.humidity || 0}
-              healthConditions={userProfile?.conditions}
-            />
+            <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin mx-auto" />}>
+              <AIHealthAdvice
+                pm25={pm25Value}
+                temperature={data?.temperature || 0}
+                humidity={data?.humidity || 0}
+                healthConditions={userProfile?.conditions}
+              />
+            </Suspense>
           </TabsContent>
           <TabsContent value="recommendations" className="mt-4">
             <HealthRecommendations 
@@ -341,28 +351,32 @@ const Index = () => {
             />
           </TabsContent>
           <TabsContent value="hospitals" className="mt-4">
-            <NearbyHospitals />
+            <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin mx-auto" />}>
+              <NearbyHospitals />
+            </Suspense>
           </TabsContent>
           <TabsContent value="navigation" className="mt-4">
-            {currentPosition ? (
-              <RouteMap 
-                currentLat={currentPosition.lat}
-                currentLng={currentPosition.lng}
-              />
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                กำลังโหลดตำแหน่ง...
-              </div>
-            )}
+            <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin mx-auto" />}>
+              {currentPosition ? (
+                <RouteMap 
+                  currentLat={currentPosition.lat}
+                  currentLng={currentPosition.lng}
+                />
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                  กำลังโหลดตำแหน่ง...
+                </div>
+              )}
+            </Suspense>
           </TabsContent>
         </Tabs>
 
         {/* Info Footer */}
         <div className="text-center text-sm text-muted-foreground py-4">
-          <p>ข้อมูลอัพเดทอัตโนมัติทุก 5 นาที</p>
+          <p>ข้อมูลอัพเดทอัตโนมัติทุก 15 นาที</p>
           <p className="text-xs mt-1">
-            แหล่งข้อมูล: กรมควบคุมมลพิษ
+            แหล่งข้อมูล: IQAir API
           </p>
         </div>
       </div>
