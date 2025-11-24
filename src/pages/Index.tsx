@@ -8,6 +8,8 @@ import { HealthRecommendations } from "@/components/HealthRecommendations";
 import { AlertNotification } from "@/components/AlertNotification";
 import { LocationMonitorAlert } from "@/components/LocationMonitorAlert";
 import { BackgroundSyncStatus } from "@/components/BackgroundSyncStatus";
+import { AutoPHRIDashboard } from "@/components/AutoPHRIDashboard";
+import { UserProfileManager } from "@/components/UserProfileManager";
 import { PHRIDisplay } from "@/components/PHRIDisplay";
 import { PHRIComparison } from "@/components/PHRIComparison";
 import { HomeLocationSetup } from "@/components/HomeLocationSetup";
@@ -370,6 +372,12 @@ const Index = () => {
 
         {/* Background Sync Status */}
         <BackgroundSyncStatus />
+        
+        {/* Auto PHRI Dashboard */}
+        <AutoPHRIDashboard />
+        
+        {/* User Profile Manager */}
+        <UserProfileManager />
 
         {/* Air Quality Card */}
         {loading ? (
